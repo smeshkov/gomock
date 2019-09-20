@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,29 +26,55 @@ func versionHandler(version string) func(rw http.ResponseWriter, req *http.Reque
 	}
 }
 
+func apiHandler(endpoint *c.Endpoint, status int) func(rw http.ResponseWriter, req *http.Request) *appError {
+	return func(w http.ResponseWriter, r *http.Request) *appError {
+
+		c.Log.Debug("accessed %s", endpoint.Path)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+
+		// Serve static JSON file from JSONPath if set.
+		if endpoint.JSONPath != "" {
+			c.Log.Debug("serving from %s", endpoint.JSONPath)
+			data, err := ioutil.ReadFile(endpoint.JSONPath)
+			if err != nil {
+				return appErrorf(err, "error in reading %s", endpoint.JSONPath)
+			}
+			w.Write(data)
+			return nil
+		}
+
+		// Serve JSON from API configuration instead.
+		c.Log.Debug("serving %v", endpoint.JSON)
+		writeResponse(w, endpoint.JSON)
+		return nil
+	}
+}
+
 func setupAPI(api *c.API, router *mux.Router) error {
 	if api == nil {
 		return errors.New("provided API is nil")
 	}
 
 	for _, e := range api.Endpoints {
+
+		c.Log.Info("setting up %s", e.Path)
+
+		method := e.Method
+		if method == "" {
+			method = http.MethodGet
+		}
+
+		status := e.Status
+		if status <= 0 {
+			status = http.StatusOK
+		}
+
 		router.
-			Methods(e.Method).
+			Methods(method).
 			Path(e.Path).
-			Handler(appHandler(func(w http.ResponseWriter, r *http.Request) *appError {
-
-				w.Header().Set("Content-Type", "application/json")
-
-				// Serve static JSON file from JSONPath if set
-				if e.JSONPath != "" {
-					http.ServeFile(w, r, e.JSONPath)
-					return nil
-				}
-
-				// Serve JSON from API configuration instead
-				w.Write([]byte(e.JSON))
-				return nil
-			}))
+			Handler(appHandler(apiHandler(e, status)))
 	}
 
 	return nil

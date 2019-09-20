@@ -1,0 +1,8 @@
+server:
+  idletimeout: 5s
+  readtimeout: 300s
+  writetimeout: 300s
+  addr: ":8080"
+
+logger:
+  level: info

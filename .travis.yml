@@ -3,9 +3,6 @@ language: go
 go:
   - 1.13.x
 
-env:
-  - GO111MODULE=on
-
 before_install:
   - go get -t -v ./...
 
@@ -21,8 +18,7 @@ before_deploy:
 
 deploy:
   provider: releases
-  api_key:
-    secure: VSq3ZZgPtklNr8JizBeHDTb9uiUmK/XbviiE7zU/oZ41XZM036Bbu2Ka4AedCemp0sMI3khwe8wg9SaCQCNByZjRmZG+5b+QfOqWi+XjvH1BhMnXHUxRtGJ4YmIjfv7m8iVaVEOtpi3YtBpZ2RRRop9DNNHiY6h9vn63Hee+y/xlDt2HULM9hFVY6FCFfcYw2VGaLubbSvYQeO4fwHuzFhozUrwac2N2DqnHtylE4cDyoW57wpsMNrOEfkC/F4nMXVDWlCNLciFd062DPeO60KtUKyYWHFI/dpJRdvh27VJ8Tn2XSq1dUVh9E1QnxMZssuY3vPJGrzaozjL2nQKzevILX7YKcAE+0q1jpOP1xnmpNCDVduru0U6P5gckFxkAWL6lywwqtUcfa8F77Mn9h3Clrv/yOq9y3GZ3dOY6gEEzY3dvOB4JmAraVvI7m8gHfBW1oxQdvjoiHBfAQSabjSkf1ufk9EZYK7fKumFKO/x7AF7jYyuCFPzieZhDJyYe4N3ElXc4V1PqfxWP3ic7aEVGu8UO/wA8fVFJeSKFVUfiAFuxK2SgBDZTt4yf1kH/ZhzbGjU0CPQnHb1CTsJ9F0y6EwzIjrPYfGDVoLhvybPCz3hTKhIivB6StQdD03/LH/lRMv9tAtbBPxUUtqe3PSVwQH7LqwxTDr1LJ7WqzQw=
+  github_token: ${GITHUB_TOKEN}
   file:
     - "gomock_darwin_$TRAVIS_TAG"
     - "gomock_linux_$TRAVIS_TAG"

@@ -35,6 +35,7 @@ Use `./gomock --help` for help.
     {
       "method": "POST",
       "path": "/error",
+      "delay": 100,
       "status": 400,
       "json": {
         "message": "failed"
@@ -52,6 +53,8 @@ Mock configuration fields:
 Endpoint object in `endpoints` list:
 
 - `method` - optional (defaults to "GET");
+- `path` - required, URL path to the mocked endpoint;
+- `delay` - delay in milliseconds on the server side;
 - `status` - optional (defaults to 200);
 - `json` - one way of defining response payload, will output given JSON
 - `jsonPath` - another way of defining response payload, will read file from the given path and write its contents to response

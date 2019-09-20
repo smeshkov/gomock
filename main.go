@@ -28,7 +28,7 @@ func main() {
 		c.Log.Warn("failed to load configuration %s: %v", *config, err)
 	}
 
-	mck, err = c.NewAPI(*mock)
+	mck, err = c.NewMock(*mock)
 	if err != nil {
 		c.Log.Fatal("failed to load API configuration %s: %v", *mock, err)
 	}

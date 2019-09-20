@@ -16,12 +16,13 @@ type Endpoint struct {
 	Method   string      `json:"method,omitempty"`
 	Status   int         `json:"status,omitempty"`
 	Path     string      `json:"path"`
+	Delay    int         `json:"delay,omitempty"`
 	JSONPath string      `json:"jsonPath,omitempty"`
 	JSON     interface{} `json:"json,omitempty"`
 }
 
 // NewMock loads API configuration from file.
-func NewAPI(file string) (mock Mock, err error) {
+func NewMock(file string) (mock Mock, err error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return

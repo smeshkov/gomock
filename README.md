@@ -1,4 +1,7 @@
 # Go Mock
+
+[![Build Status](https://travis-ci.com/smeshkov/gomock.svg?branch=master)](https://travis-ci.com/smeshkov/gomock)
+
 Light weight mock server written in [Go](https://golang.org/).
 
 # Usage

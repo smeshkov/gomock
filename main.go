@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"net/http"
 
 	"github.com/smeshkov/gomock/app"
@@ -30,6 +31,10 @@ func main() {
 	api, err = c.NewAPI(*apiConfig)
 	if err != nil {
 		c.Log.Fatal("failed to load API configuration %s: %v", *apiConfig, err)
+	}
+
+	if api.Port > 0 {
+		cfg.Server.Addr = fmt.Sprintf(":%d", api.Port)
 	}
 
 	srv := &http.Server{

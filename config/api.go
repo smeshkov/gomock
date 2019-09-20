@@ -7,7 +7,7 @@ import (
 
 // API represents configuration of API.
 type API struct {
-	Port      int         `json:"port"`
+	Port      int         `json:"port,omitempty"`
 	Endpoints []*Endpoint `json:"endpoints"`
 }
 

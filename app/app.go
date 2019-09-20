@@ -11,7 +11,7 @@ import (
 )
 
 // RegisterHandlers registers all handlers of the application.
-func RegisterHandlers(version string, cfg *c.Config, api *c.API) http.Handler {
+func RegisterHandlers(version string, cfg *c.Config, mck *c.Mock) http.Handler {
 
 	// Use gorilla/mux for rich routing.
 	// See http://www.gorillatoolkit.org/pkg/mux
@@ -23,7 +23,7 @@ func RegisterHandlers(version string, cfg *c.Config, api *c.API) http.Handler {
 	// Shows current version of the App
 	r.Methods(http.MethodGet).Path("/version").Handler(appHandler(versionHandler(version)))
 
-	setupAPI(api, r)
+	setupAPI(mck, r)
 
 	return r
 }

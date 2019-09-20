@@ -52,12 +52,12 @@ func apiHandler(endpoint *c.Endpoint, status int) func(rw http.ResponseWriter, r
 	}
 }
 
-func setupAPI(api *c.API, router *mux.Router) error {
-	if api == nil {
+func setupAPI(mck *c.Mock, router *mux.Router) error {
+	if mck == nil {
 		return errors.New("provided API is nil")
 	}
 
-	for _, e := range api.Endpoints {
+	for _, e := range mck.Endpoints {
 
 		c.Log.Info("setting up %s", e.Path)
 

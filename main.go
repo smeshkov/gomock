@@ -14,27 +14,27 @@ var (
 )
 
 func main() {
-	appConfig := flag.String("config", "_resources/config.yml", "Configuration file")
-	apiConfig := flag.String("api", "api.json", "API configuration file")
+	config := flag.String("config", "_resources/config.yml", "Configuration file")
+	mock := flag.String("mock", "mock.json", "Mock configuration file")
 
 	flag.Parse()
 
 	var cfg c.Config
-	var api c.API
+	var mck c.Mock
 	var err error
 
-	cfg, err = c.NewConfig(*appConfig)
+	cfg, err = c.NewConfig(*config)
 	if err != nil {
-		c.Log.Warn("failed to load configuration %s: %v", *appConfig, err)
+		c.Log.Warn("failed to load configuration %s: %v", *config, err)
 	}
 
-	api, err = c.NewAPI(*apiConfig)
+	mck, err = c.NewAPI(*mock)
 	if err != nil {
-		c.Log.Fatal("failed to load API configuration %s: %v", *apiConfig, err)
+		c.Log.Fatal("failed to load API configuration %s: %v", *mock, err)
 	}
 
-	if api.Port > 0 {
-		cfg.Server.Addr = fmt.Sprintf(":%d", api.Port)
+	if mck.Port > 0 {
+		cfg.Server.Addr = fmt.Sprintf(":%d", mck.Port)
 	}
 
 	srv := &http.Server{
@@ -43,7 +43,7 @@ func main() {
 		ReadTimeout:       cfg.Server.ReadTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
 		Addr:              cfg.Server.Addr,
-		Handler:           app.RegisterHandlers(version, &cfg, &api),
+		Handler:           app.RegisterHandlers(version, &cfg, &mck),
 	}
 
 	c.Log.Info("starting app on %s (read timeout %v, write timeout %v)",

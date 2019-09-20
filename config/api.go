@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 )
 
-// API represents configuration of API.
-type API struct {
+// Mock represents configuration of API.
+type Mock struct {
 	Port      int         `json:"port,omitempty"`
 	Endpoints []*Endpoint `json:"endpoints"`
 }
@@ -20,19 +20,19 @@ type Endpoint struct {
 	JSON     interface{} `json:"json,omitempty"`
 }
 
-// NewAPI loads API configuration from file.
-func NewAPI(file string) (api API, err error) {
+// NewMock loads API configuration from file.
+func NewAPI(file string) (mock Mock, err error) {
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
 		return
 	}
 
-	err = json.Unmarshal(data, &api)
+	err = json.Unmarshal(data, &mock)
 	if err != nil {
 		return
 	}
 
-	Log.Debug("API configuration:\n%#v", &api)
+	Log.Debug("mock configuration: %#v", &mock)
 
 	return
 }

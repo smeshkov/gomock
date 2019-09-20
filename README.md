@@ -6,26 +6,27 @@ Light weight mock server written in [Go](https://golang.org/).
 
 # Usage
 
-Put `api.json` near to `gomock` binary and start mock server by running `./gomock`.
+Put `mock.json` near to `gomock` binary and start mock server by running `./gomock`.
 
-`api.json` defines mocks - handlers which will provided predefined JSON responses.
+Use `./gomock --help` for help.
 
-`api.json` example:
+`mock.json` defines mocks - handlers which will provided predefined JSON responses.
+
+`mock.json` example:
 
 ```json
 {
-  "port": 3000, // optional (defualts to 8080)
+  "port": 3000,
   "endpoints": [
     {
-      "method": "GET", // optional (defualts to GET)
-      "status": 200, // optional (defualts to GET)
+      "method": "GET",
+      "status": 200,
       "path": "/users",
-      "jsonPath": "./users.json" // one way of defining response payload: will read from ./users.json to response
+      "jsonPath": "./users.json"
     },
     {
-      // "method" and "status" are omited, therefore set to defaults GET and 200
       "path": "/user/1",
-      "json": { // another way of defining response payload: will output given JSON
+      "json": {
         "id": 1,
         "name": "name",
         "address": "address"
@@ -42,6 +43,20 @@ Put `api.json` near to `gomock` binary and start mock server by running `./gomoc
   ]
 }
 ```
+
+Mock configuration fields:
+
+- `port` - optional (defaults to 8080);
+- `endpoints` - an array of endpoints to configure;
+
+Endpoint object in `endpoints` list:
+
+- `method` - optional (defaults to "GET");
+- `status` - optional (defaults to 200);
+- `json` - one way of defining response payload, will output given JSON
+- `jsonPath` - another way of defining response payload, will read file from the given path and write its contents to response
+
+mock.json is the defaukt name for mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
 
 ## Changelog
 

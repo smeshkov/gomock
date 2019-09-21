@@ -6,9 +6,10 @@ Light weight mock server written in [Go](https://golang.org/).
 
 # Usage
 
-Put `mock.json` near to `gomock` binary and start mock server by running `./gomock`.
+1. [Download](https://github.com/smeshkov/gomock/releases/latest) latest release.
+2. Put `mock.json` near to `gomock` binary and start mock server by running `./gomock_darwin_v<version>` (or `./gomock_linux_v<version>`).
 
-Use `./gomock --help` for help.
+Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) for help.
 
 `mock.json` defines mocks - handlers which will provided predefined JSON responses.
 

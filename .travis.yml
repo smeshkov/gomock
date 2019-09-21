@@ -19,7 +19,7 @@ before_deploy:
 deploy:
   provider: releases
   api_key:
-    secure: dq5LLrN03nWvUpjvcNqzdedfnKL6kdaeTn13yJRTa0s9t9XTccQ22wzZerkKFZwibLfWr5zfssWrB/6gLrR/mKTrq7DH8z235VMlLGpmjZap0xz9qa9tDXfnb54dhmVYHN+MjyYquJkVQE9+CDkPjd3nkopQ+dvk8aLjX2bOLsg8EoZy+8l9INWIVfwd3Kkid9CLX9tiYFQt7ksFKu3voDAK8Xfdwuyo8U/s8sFLx708F39vMqmMhR9dCpCuzVD/Kp8QW73mTCgD1ZtcyI23AsD2DHvEH8pk0+WYwwsUYciCRd5TPUMRCoW41TWotoE3w0KdwHHCOy4WK6U36poJFgPtqyXm++hYk/5gxjTNmjCA1+v4J2yQXFdwdDVeRLrXua3FUCOKTJk8DU4XyHyHF8DW7iPICTKgAWEHgr/ahCzx5Eh8dqhOogxVK9yv6/ha8EKrXdL6ReNQh90xcYOs2b7eLO6uP+KjnKAvH0yY90jLmf0ao7za6uz6O5Gn9VTnlXOFgGUIzeegl8YscuXU8LV1UnQK1hE+trcL8+Fq0E8WgSGsepsyVKpOeC81rzsLPxCW3n+7zk5LbdQcyFFrMpYzbQsz7cESaKWzhYGieNu9+XDEBnmYSnsYbLD3ht9d2irE7BmFVVZRgp3eAZewT3jhYje2mdwHpg5ZnlUHTpI=
+    secure: "$GITHUB_API_KEY"
   file:
     - "gomock_darwin_$TRAVIS_TAG"
     - "gomock_linux_$TRAVIS_TAG"

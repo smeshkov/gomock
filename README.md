@@ -36,7 +36,7 @@ Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) 
     {
       "method": "POST",
       "path": "/error",
-      "delay": 100,
+      "delay": "100ms",
       "status": 400,
       "json": {
         "message": "failed"

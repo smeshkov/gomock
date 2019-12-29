@@ -23,7 +23,7 @@ func RegisterHandlers(version string, cfg *c.Config, mck *c.Mock) http.Handler {
 	// Shows current version of the App
 	r.Methods(http.MethodGet).Path("/version").Handler(appHandler(versionHandler(version)))
 
-	setupAPI(mck, r)
+	setupAPI(mck, r, newClient())
 
 	return r
 }

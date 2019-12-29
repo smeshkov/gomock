@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"io/ioutil"
+	"net/url"
 )
 
 // Mock represents configuration of API.
@@ -19,6 +20,8 @@ type Endpoint struct {
 	Delay    int         `json:"delay,omitempty"`
 	JSONPath string      `json:"jsonPath,omitempty"`
 	JSON     interface{} `json:"json,omitempty"`
+	URL      *url.URL    `json:"url,omitempty"`
+	// Mock     json.RawMessage `json:"mock,omitempty"`
 }
 
 // NewMock loads API configuration from file.

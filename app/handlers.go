@@ -1,7 +1,7 @@
 package app
 
 import (
-	"errors"
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -27,7 +27,7 @@ func versionHandler(version string) func(rw http.ResponseWriter, req *http.Reque
 	}
 }
 
-func apiHandler(endpoint *c.Endpoint, status int) func(rw http.ResponseWriter, req *http.Request) *appError {
+func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.ResponseWriter, req *http.Request) *appError {
 	return func(w http.ResponseWriter, r *http.Request) *appError {
 
 		c.Log.Debug("accessed %s", endpoint.Path)
@@ -36,7 +36,27 @@ func apiHandler(endpoint *c.Endpoint, status int) func(rw http.ResponseWriter, r
 			time.Sleep(time.Duration(endpoint.Delay) * time.Millisecond)
 		}
 
-		w.Header().Set("Content-Type", "application/json")
+		// Proxy request to the provide URL.
+		if endpoint.URL != nil {
+			c.Log.Debug("proxying to %s", endpoint.URL.String())
+			resp, err := client.proxy(r, endpoint.URL)
+			if err != nil {
+				return appErrorf(err, "error in proxuying to %s", endpoint.URL.String())
+			}
+			defer resp.Body.Close()
+			w.WriteHeader(resp.StatusCode)
+			buf := new(bytes.Buffer)
+			_, err = buf.ReadFrom(resp.Body)
+			if err != nil {
+				return appErrorf(err, "error in reading response from %s", endpoint.URL.String())
+			}
+			_, err = w.Write(buf.Bytes())
+			if err != nil {
+				return appErrorf(err, "error in writing response from %s", endpoint.URL.String())
+			}
+			return nil
+		}
+
 		w.WriteHeader(status)
 
 		// Serve static JSON file from JSONPath if set.
@@ -46,7 +66,10 @@ func apiHandler(endpoint *c.Endpoint, status int) func(rw http.ResponseWriter, r
 			if err != nil {
 				return appErrorf(err, "error in reading from %s", endpoint.JSONPath)
 			}
-			w.Write(data)
+			_, err = w.Write(data)
+			if err != nil {
+				return appErrorf(err, "error in writing data from %s", endpoint.JSONPath)
+			}
 			return nil
 		}
 
@@ -57,11 +80,7 @@ func apiHandler(endpoint *c.Endpoint, status int) func(rw http.ResponseWriter, r
 	}
 }
 
-func setupAPI(mck *c.Mock, router *mux.Router) error {
-	if mck == nil {
-		return errors.New("provided API is nil")
-	}
-
+func setupAPI(mck *c.Mock, router *mux.Router, client *client) {
 	for _, e := range mck.Endpoints {
 
 		c.Log.Info("setting up %s", e.Path)
@@ -79,8 +98,6 @@ func setupAPI(mck *c.Mock, router *mux.Router) error {
 		router.
 			Methods(method).
 			Path(e.Path).
-			Handler(appHandler(apiHandler(e, status)))
+			Handler(appHandler(apiHandler(e, status, client)))
 	}
-
-	return nil
 }

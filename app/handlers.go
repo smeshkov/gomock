@@ -11,6 +11,8 @@ import (
 	c "github.com/smeshkov/gomock/config"
 )
 
+var zeroDuration = time.Duration(0)
+
 // GET /healthcheck
 func healthcheckHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return writeResponse(w, map[string]interface{}{
@@ -32,8 +34,8 @@ func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.R
 
 		c.Log.Debug("accessed %s", endpoint.Path)
 
-		if endpoint.Delay > 0 {
-			time.Sleep(time.Duration(endpoint.Delay) * time.Millisecond)
+		if endpoint.Delay > zeroDuration {
+			time.Sleep(endpoint.Delay)
 		}
 
 		// Proxy request to the provide URL.

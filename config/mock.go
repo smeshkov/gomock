@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/url"
+	"time"
 )
 
 // Mock represents configuration of API.
@@ -14,13 +15,13 @@ type Mock struct {
 
 // Endpoint represents API endpoint configuration.
 type Endpoint struct {
-	Method   string      `json:"method,omitempty"`
-	Status   int         `json:"status,omitempty"`
-	Path     string      `json:"path"`
-	Delay    int         `json:"delay,omitempty"`
-	JSONPath string      `json:"jsonPath,omitempty"`
-	JSON     interface{} `json:"json,omitempty"`
-	URL      *url.URL    `json:"url,omitempty"`
+	Method   string        `json:"method,omitempty"`
+	Status   int           `json:"status,omitempty"`
+	Path     string        `json:"path"`
+	Delay    time.Duration `json:"delay,omitempty"`
+	JSONPath string        `json:"jsonPath,omitempty"`
+	JSON     interface{}   `json:"json,omitempty"`
+	URL      *url.URL      `json:"url,omitempty"`
 	// Mock     json.RawMessage `json:"mock,omitempty"`
 }
 

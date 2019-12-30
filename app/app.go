@@ -6,12 +6,13 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 
-	c "github.com/smeshkov/gomock/config"
+	"github.com/smeshkov/gomock/config"
 )
 
 // RegisterHandlers registers all handlers of the application.
-func RegisterHandlers(version string, cfg *c.Config, mck *c.Mock) http.Handler {
+func RegisterHandlers(version string, cfg *config.Config, mck *config.Mock) http.Handler {
 
 	// Use gorilla/mux for rich routing.
 	// See http://www.gorillatoolkit.org/pkg/mux
@@ -35,12 +36,17 @@ type appError struct {
 	Error   error
 	Message string
 	Code    int
+	Log     *zap.Logger
 }
 
 func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e := fn(w, r); e != nil { // e is *appError, not os.Error.
-		c.Log.Error("Handler error: status code: %d, message: %s, underlying err: %#v",
-			e.Code, e.Message, e.Error)
+		l := e.Log
+		if l == nil {
+			l = zap.L()
+		}
+		l.Error(fmt.Sprintf("handler error: status code: %d, message: %s, underlying err: %#v",
+			e.Code, e.Message, e.Error))
 
 		http.Error(w, e.Message, e.Code)
 	}

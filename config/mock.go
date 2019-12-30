@@ -42,7 +42,5 @@ func NewMock(file string) (mock Mock, err error) {
 		return
 	}
 
-	Log.Debug("mock configuration: %#v", &mock)
-
 	return
 }

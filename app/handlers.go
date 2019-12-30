@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -10,8 +11,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 
-	c "github.com/smeshkov/gomock/config"
+	"github.com/smeshkov/gomock/config"
 )
 
 var zeroDuration = time.Duration(0)
@@ -32,19 +34,8 @@ func versionHandler(version string) func(rw http.ResponseWriter, req *http.Reque
 	}
 }
 
-func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.ResponseWriter, req *http.Request) *appError {
-	var ops uint64
-	var errCnt uint64
-	var errCodes []int
-	if endpoint.Errors != nil {
-		if len(endpoint.Errors.Statuses) > 0 {
-			errCodes = endpoint.Errors.Statuses
-		} else {
-			errCodes = []int{http.StatusInternalServerError}
-		}
-		errCnt = uint64(1.0 / endpoint.Errors.Sample)
-		c.Log.Debug("%s - every %d request will fail with either of %v HTTP codes", endpoint.Path, errCnt, errCodes)
-	}
+func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *client) func(rw http.ResponseWriter, req *http.Request) *appError {
+	ops, errCnt, errCodes := setupFails(endpoint)
 
 	return func(w http.ResponseWriter, r *http.Request) *appError {
 
@@ -57,9 +48,10 @@ func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.R
 			if ops == errCnt {
 				atomic.StoreUint64(&ops, 0)
 				code := errCodes[rand.Intn(len(errCodes))]
-				c.Log.Debug("%s - HTTP %d", endpoint.Path, code)
+				log.Debug("failed", zap.Int("code", code))
 				return &appError{
 					Code: code,
+					Log: log,
 				}
 
 			}
@@ -67,14 +59,22 @@ func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.R
 
 		// Proxy request to the provide URL.
 		if endpoint.URL != "" {
-			c.Log.Debug("%s - proxying to %s", endpoint.Path, endpoint.URL)
+			log.Debug("proxying call", zap.String("proxy_to", endpoint.URL))
 			u, err := url.Parse(endpoint.URL)
 			if err != nil {
-				return appErrorf(err, "error in parsing URL %s", endpoint.URL)
+				return &appError{
+					Error: err,
+					Message: "error in parsing proxy to URL",
+					Log: log,
+				}
 			}
 			resp, err := client.proxy(r, u)
 			if err != nil {
-				return appErrorf(err, "error in proxying to %s", endpoint.URL)
+				return &appError{
+					Error: err,
+					Message: "error in proxying to URL",
+					Log: log,
+				}
 			}
 			for k, vs := range resp.Header {
 				for _, v := range vs {
@@ -85,12 +85,20 @@ func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.R
 			if resp.Body != nil {
 				_, err = buf.ReadFrom(resp.Body)
 				if err != nil {
-					return appErrorf(err, "error in reading response from %s", endpoint.URL)
+					return &appError{
+						Error: err,
+						Message: "error in reading response from proxyed URL",
+						Log: log,
+					}
 				}
 				defer resp.Body.Close()
 				_, err = w.Write(buf.Bytes())
 				if err != nil {
-					return appErrorf(err, "error in writing response from %s", endpoint.URL)
+					return &appError{
+						Error: err,
+						Message: "error in writing response to client",
+						Log: log,
+					}
 				}
 			}
 			return nil
@@ -100,29 +108,51 @@ func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.R
 
 		// Serve static JSON file from JSONPath if set.
 		if endpoint.JSONPath != "" {
-			c.Log.Debug("%s - replying with %s", endpoint.Path, endpoint.JSONPath)
+			log.Debug("returning contents of JSON path", zap.String("json_path", endpoint.JSONPath))
 			data, err := ioutil.ReadFile(endpoint.JSONPath)
 			if err != nil {
-				return appErrorf(err, "error in reading from %s", endpoint.JSONPath)
+				return &appError{
+					Error: err,
+					Message: "error in reading from JSON path",
+					Log: log,
+				}
 			}
 			_, err = w.Write(data)
 			if err != nil {
-				return appErrorf(err, "error in writing data from %s", endpoint.JSONPath)
+				return &appError{
+					Error: err,
+					Message: "error in writing data from JSON path to client",
+					Log: log,
+				}
 			}
 			return nil
 		}
 
 		// Serve JSON from API configuration instead.
-		c.Log.Debug("%s - replying with %#v", endpoint.Path, endpoint.JSON)
+		log.Debug("returning object", zap.String("object", fmt.Sprintf("%#v", endpoint.JSON)))
 		writeResponse(w, endpoint.JSON)
 		return nil
 	}
 }
 
-func setupAPI(mck *c.Mock, router *mux.Router, client *client) {
-	for _, e := range mck.Endpoints {
+func setupFails(endpoint *config.Endpoint) (ops uint64, errCnt uint64, errCodes []int) {
+	if endpoint.Errors != nil {
+		if len(endpoint.Errors.Statuses) > 0 {
+			errCodes = endpoint.Errors.Statuses
+		} else {
+			errCodes = []int{http.StatusInternalServerError}
+		}
+		errCnt = uint64(1.0 / endpoint.Errors.Sample)
+		zap.L().Debug("every Nth request will fail",
+			zap.String("path", endpoint.Path),
+			zap.Uint64("every_nth_err", errCnt),
+			zap.String("errCodes", fmt.Sprintf("%v", errCodes)))
+	}
+	return
+}
 
-		c.Log.Info("setting up %s", e.Path)
+func setupAPI(mck *config.Mock, router *mux.Router, client *client) {
+	for _, e := range mck.Endpoints {
 
 		var r *mux.Route
 		if e.Path == "/" {
@@ -138,6 +168,14 @@ func setupAPI(mck *c.Mock, router *mux.Router, client *client) {
 			status = http.StatusOK
 		}
 
-		r.Handler(appHandler(apiHandler(e, status, client)))
+		l := zap.L().With(
+			zap.String("path", e.Path),
+			zap.String("methods", fmt.Sprintf("%v", e.Methods)),
+			zap.Int("status", status),
+		)
+
+		l.Info("setting up path")
+
+		r.Handler(appHandler(apiHandler(l, e, status, client)))
 	}
 }

@@ -4,16 +4,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	"bitbucket.org/atlassian/sink/logger"
 	"gopkg.in/yaml.v2"
-)
-
-// Logger is an alias for the external logger type.
-type Logger = logger.Logger
-
-var (
-	// Log is the global logger.
-	Log = logger.NewLogger()
 )
 
 // Config represents configuration of application.
@@ -40,11 +31,6 @@ func NewConfig(file string) (cfg Config, err error) {
 
 	// Logger ...
 	cfg.Logger.Level = "info"
-
-	defer func() {
-		Log.Info("setting log level to %s", cfg.Logger.Level)
-		Log = logger.NewLoggerLevel(cfg.Logger.Level)
-	}()
 
 	data, err := ioutil.ReadFile(file)
 	if err != nil {

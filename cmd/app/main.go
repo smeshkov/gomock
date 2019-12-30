@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"go.uber.org/zap"
+
 	"github.com/smeshkov/gomock/app"
-	c "github.com/smeshkov/gomock/config"
+	"github.com/smeshkov/gomock/config"
 )
 
 var (
@@ -14,24 +16,27 @@ var (
 )
 
 func main() {
-	config := flag.String("config", "_resources/config.yml", "Configuration file")
-	mock := flag.String("mock", "mock.json", "Mock configuration file")
+	configFile := flag.String("config", "_resources/config.yml", "Configuration file")
+	mockFile := flag.String("mock", "mock.json", "Mock configuration file")
 
 	flag.Parse()
 
-	var cfg c.Config
-	var mck c.Mock
+	var cfg config.Config
+	var mck config.Mock
 	var err error
 
-	cfg, err = c.NewConfig(*config)
+	cfg, err = config.NewConfig(*configFile)
 	if err != nil {
-		c.Log.Warn("failed to load configuration %s: %v", *config, err)
+		zap.L().Warn(fmt.Sprintf("failed to load configuration %s: %v", *configFile, err))
 	}
 
-	mck, err = c.NewMock(*mock)
+	config.SetupLog(cfg.Logger.Level)
+
+	mck, err = config.NewMock(*mockFile)
 	if err != nil {
-		c.Log.Fatal("failed to load API configuration %s: %v", *mock, err)
+		zap.L().Warn(fmt.Sprintf("failed to load API configuration %s: %v", *mockFile, err))
 	}
+	zap.L().Debug(fmt.Sprintf("mock configuration: %#v", &mck))
 
 	if mck.Port > 0 {
 		cfg.Server.Addr = fmt.Sprintf(":%d", mck.Port)
@@ -46,9 +51,9 @@ func main() {
 		Handler:           app.RegisterHandlers(version, &cfg, &mck),
 	}
 
-	c.Log.Info("starting app on %s (read timeout %v, write timeout %v)",
-		cfg.Server.Addr, cfg.Server.ReadTimeout, cfg.Server.WriteTimeout)
+	zap.L().Info(fmt.Sprintf("starting app on %s (read timeout %s, write timeout %s)",
+		cfg.Server.Addr, cfg.Server.ReadTimeout.String(), cfg.Server.WriteTimeout.String()))
 	if err = srv.ListenAndServe(); err != nil {
-		c.Log.Fatal("failed to start server: %v", err)
+		zap.L().Fatal(fmt.Sprintf("failed to start server: %v", err))
 	}
 }

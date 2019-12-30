@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/smeshkov/gomock/config"
+	"go.uber.org/zap"
 )
 
 type client struct {
@@ -32,7 +32,7 @@ func (c *client) proxy(req *http.Request, url *url.URL) (*http.Response, error) 
 	}
 
 	addr := sb.String()
-	config.Log.Debug("proxying call to %s %s", req.Method, addr)
+	zap.L().Debug("proxying call", zap.String("method", req.Method), zap.String("address", addr))
 
 	r, err := http.NewRequest(req.Method, addr, req.Body)
 	if err != nil {

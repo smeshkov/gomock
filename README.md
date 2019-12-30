@@ -36,11 +36,17 @@ Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) 
     {
       "method": "POST",
       "path": "/error",
-      "delay": "100ms",
+      "delay": 100,
       "status": 400,
       "json": {
         "message": "failed"
       }
+    },
+    {
+      "method": "POST",
+      "path": "*",
+      "delay": 200,
+      "url": "http://localhost:3003"
     }
   ]
 }

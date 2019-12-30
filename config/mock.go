@@ -13,14 +13,21 @@ type Mock struct {
 
 // Endpoint represents API endpoint configuration.
 type Endpoint struct {
-	Method   string      `json:"method,omitempty"`
+	Methods  []string    `json:"methods,omitempty"`
 	Status   int         `json:"status,omitempty"`
 	Path     string      `json:"path"`
 	Delay    int         `json:"delay,omitempty"`
 	JSONPath string      `json:"jsonPath,omitempty"`
 	JSON     interface{} `json:"json,omitempty"`
 	URL      string      `json:"url,omitempty"`
+	Errors   *Errors     `json:"errors,omitempty"`
 	// Mock     json.RawMessage `json:"mock,omitempty"`
+}
+
+// Errors ...
+type Errors struct {
+	Sample   float32 `json:"sample,omitempty"`
+	Statuses []int   `json:"statuses,omitempty"`
 }
 
 // NewMock loads API configuration from file.

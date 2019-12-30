@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -39,22 +40,26 @@ func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.R
 		}
 
 		// Proxy request to the provide URL.
-		if endpoint.URL != nil {
-			c.Log.Debug("proxying to %s", endpoint.URL.String())
-			resp, err := client.proxy(r, endpoint.URL)
+		if endpoint.URL != "" {
+			c.Log.Debug("proxying to %s", endpoint.URL)
+			u, err := url.Parse(endpoint.URL)
 			if err != nil {
-				return appErrorf(err, "error in proxuying to %s", endpoint.URL.String())
+				return appErrorf(err, "error in parsing URL %s", endpoint.URL)
+			}
+			resp, err := client.proxy(r, u)
+			if err != nil {
+				return appErrorf(err, "error in proxying to %s", endpoint.URL)
 			}
 			defer resp.Body.Close()
 			w.WriteHeader(resp.StatusCode)
 			buf := new(bytes.Buffer)
 			_, err = buf.ReadFrom(resp.Body)
 			if err != nil {
-				return appErrorf(err, "error in reading response from %s", endpoint.URL.String())
+				return appErrorf(err, "error in reading response from %s", endpoint.URL)
 			}
 			_, err = w.Write(buf.Bytes())
 			if err != nil {
-				return appErrorf(err, "error in writing response from %s", endpoint.URL.String())
+				return appErrorf(err, "error in writing response from %s", endpoint.URL)
 			}
 			return nil
 		}

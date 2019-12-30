@@ -34,8 +34,8 @@ func apiHandler(endpoint *c.Endpoint, status int, client *client) func(rw http.R
 
 		c.Log.Debug("accessed %s", endpoint.Path)
 
-		if endpoint.Delay > zeroDuration {
-			time.Sleep(endpoint.Delay)
+		if endpoint.Delay > 0 {
+			time.Sleep(time.Duration(endpoint.Delay) * time.Millisecond)
 		}
 
 		// Proxy request to the provide URL.

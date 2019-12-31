@@ -63,8 +63,10 @@ Endpoint object in `endpoints` list:
 - `path` - required, URL path to the mocked endpoint;
 - `delay` - delay in milliseconds on the server side;
 - `status` - optional (defaults to 200);
-- `json` - one way of defining response payload, will output given JSON
-- `jsonPath` - another way of defining response payload, will read file from the given path and write its contents to response
+- `json` - one way of defining response payload, will output given JSON;
+- `jsonPath` - another way of defining response payload, will read file from the given path and write its contents to response;
+- `proxy` - proxies requests to the given address;
+- `errors` - helps to setup sampled errors, with the randomised error codes.
 
 mock.json is the defaukt name for mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
 

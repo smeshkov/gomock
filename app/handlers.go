@@ -48,32 +48,32 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 			if ops == errCnt {
 				atomic.StoreUint64(&ops, 0)
 				code := errCodes[rand.Intn(len(errCodes))]
-				log.Debug("failed", zap.Int("code", code))
 				return &appError{
-					Code: code,
-					Log: log,
+					Code:    code,
+					Message: "failed with predefined error",
+					Log:     log,
 				}
 
 			}
 		}
 
 		// Proxy request to the provide URL.
-		if endpoint.URL != "" {
-			log.Debug("proxying call", zap.String("proxy_to", endpoint.URL))
-			u, err := url.Parse(endpoint.URL)
+		if endpoint.Proxy != "" {
+			log.Debug("proxying call", zap.String("proxy_to", endpoint.Proxy))
+			u, err := url.Parse(endpoint.Proxy)
 			if err != nil {
 				return &appError{
-					Error: err,
+					Error:   err,
 					Message: "error in parsing proxy to URL",
-					Log: log,
+					Log:     log,
 				}
 			}
 			resp, err := client.proxy(r, u)
 			if err != nil {
 				return &appError{
-					Error: err,
+					Error:   err,
 					Message: "error in proxying to URL",
-					Log: log,
+					Log:     log,
 				}
 			}
 			for k, vs := range resp.Header {
@@ -86,18 +86,18 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 				_, err = buf.ReadFrom(resp.Body)
 				if err != nil {
 					return &appError{
-						Error: err,
+						Error:   err,
 						Message: "error in reading response from proxyed URL",
-						Log: log,
+						Log:     log,
 					}
 				}
 				defer resp.Body.Close()
 				_, err = w.Write(buf.Bytes())
 				if err != nil {
 					return &appError{
-						Error: err,
+						Error:   err,
 						Message: "error in writing response to client",
-						Log: log,
+						Log:     log,
 					}
 				}
 			}
@@ -112,17 +112,17 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 			data, err := ioutil.ReadFile(endpoint.JSONPath)
 			if err != nil {
 				return &appError{
-					Error: err,
+					Error:   err,
 					Message: "error in reading from JSON path",
-					Log: log,
+					Log:     log,
 				}
 			}
 			_, err = w.Write(data)
 			if err != nil {
 				return &appError{
-					Error: err,
+					Error:   err,
 					Message: "error in writing data from JSON path to client",
-					Log: log,
+					Log:     log,
 				}
 			}
 			return nil

@@ -12,4 +12,4 @@ if [ ! -z "$VERSION" ]; then
     VERSION="_$VERSION"
 fi
 
-env GOOS=${OS} GOARCH=amd64 go build -v -o ${BINARY}_${OS}${VERSION} cmd/app/main.go
+env GOOS=${OS} GOARCH=amd64 go build -v -o _dist/${BINARY}_${OS}${VERSION} cmd/app/main.go

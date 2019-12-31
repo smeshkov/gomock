@@ -19,7 +19,7 @@ type Endpoint struct {
 	Delay    int         `json:"delay,omitempty"`
 	JSONPath string      `json:"jsonPath,omitempty"`
 	JSON     interface{} `json:"json,omitempty"`
-	URL      string      `json:"url,omitempty"`
+	Proxy    string      `json:"proxy,omitempty"`
 	Errors   *Errors     `json:"errors,omitempty"`
 	// Mock     json.RawMessage `json:"mock,omitempty"`
 }

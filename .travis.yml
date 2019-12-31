@@ -21,8 +21,8 @@ deploy:
   api_key:
     secure: "$GITHUB_API_KEY"
   file:
-    - "gomock_darwin_$TRAVIS_TAG"
-    - "gomock_linux_$TRAVIS_TAG"
+    - "_dist/gomock_darwin_$TRAVIS_TAG"
+    - "_dist/gomock_linux_$TRAVIS_TAG"
   skip_cleanup: true
   on:
     repo: smeshkov/gomock

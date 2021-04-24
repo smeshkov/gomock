@@ -1,7 +1,5 @@
 # Go Mock
 
-[![Build Status](https://travis-ci.com/smeshkov/gomock.svg?branch=master)](https://travis-ci.com/smeshkov/gomock)
-
 Light weight mock server written in [Go](https://golang.org/).
 
 # Usage
@@ -52,7 +50,7 @@ Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) 
 }
 ```
 
-Mock configuration fields:
+Mock JSON configuration properties:
 
 - `port` - optional (defaults to 8080);
 - `endpoints` - an array of endpoints to configure;
@@ -68,11 +66,15 @@ Endpoint object in `endpoints` list:
 - `proxy` - proxies requests to the given address;
 - `errors` - helps to setup sampled errors, with the randomised error codes.
 
-mock.json is the defaukt name for mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
+`mock.json` is the default name for a mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
 
 ## Changelog
 
-See [CHANGELOG.md](https://raw.githubusercontent.com/smeshkov/lsh/master/CHANGELOG.md)
+See [CHANGELOG.md](https://raw.githubusercontent.com/smeshkov/gomock/master/CHANGELOG.md)
+
+## Contributing
+
+See [CONTRIBUTING.md](https://raw.githubusercontent.com/smeshkov/gomock/master/CONTRIBUTING.md)
 
 ## License
 

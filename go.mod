@@ -1,6 +1,6 @@
 module github.com/smeshkov/gomock
 
-go 1.13
+go 1.16
 
 require (
 	github.com/gorilla/mux v1.7.3

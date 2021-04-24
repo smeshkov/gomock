@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.0
+
+- Bumped Go version to 1.16.
+
 ## v0.3.0
 
  - Added `errors` in endpoints to be able to setup sampled erroring;

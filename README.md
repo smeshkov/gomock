@@ -2,7 +2,19 @@
 
 Light weight mock server written in [Go](https://golang.org/).
 
-# Usage
+## Installation
+
+For MacOS:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh)"
+```
+
+For Linux:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh linux)"
+```
+
+## Usage
 
 1. [Download](https://github.com/smeshkov/gomock/releases/latest) latest release.
 2. Put `mock.json` near to `gomock` binary and start mock server by running `./gomock_darwin_v<version>` (or `./gomock_linux_v<version>`).

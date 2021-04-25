@@ -15,10 +15,10 @@ Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) 
 
 ```json
 {
-  "port": 3000,
+  "port": 8080,
   "endpoints": [
     {
-      "method": "GET",
+      "methods": [ "GET" ],
       "status": 200,
       "path": "/users",
       "jsonPath": "./users.json"
@@ -29,10 +29,11 @@ Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) 
         "id": 1,
         "name": "name",
         "address": "address"
-      }
+      },
+      "allowCors": [ "example.com" ]
     },
     {
-      "method": "POST",
+      "methods": ["POST"],
       "path": "/error",
       "delay": 100,
       "status": 400,
@@ -41,10 +42,10 @@ Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) 
       }
     },
     {
-      "method": "POST",
-      "path": "*",
+      "methods": [ "POST" ],
+      "path": "/api/*",
       "delay": 200,
-      "url": "http://localhost:3003"
+      "url": "http://localhost:8090"
     }
   ]
 }
@@ -57,14 +58,15 @@ Mock JSON configuration properties:
 
 Endpoint object in `endpoints` list:
 
-- `method` - optional (defaults to "GET");
-- `path` - required, URL path to the mocked endpoint;
+- `methods` - list of allowed methods, optional defaults to "GET";
+- `path` - URL path to the mocked endpoint, if not set, then defaults to catch all;
 - `delay` - delay in milliseconds on the server side;
-- `status` - optional (defaults to 200);
+- `status` - HTTP response status code, optional defaults to 200;
 - `json` - one way of defining response payload, will output given JSON;
-- `jsonPath` - another way of defining response payload, will read file from the given path and write its contents to response;
+- `jsonPath` - another way of defining response payload, will read file from the given path (can be relative to the root mock JSON file) and write its contents to response;
 - `proxy` - proxies requests to the given address;
 - `errors` - helps to setup sampled errors, with the randomised error codes.
+- `allowCors` - list of allowed domains for CORS.
 
 `mock.json` is the default name for a mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
 

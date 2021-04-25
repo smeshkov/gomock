@@ -7,6 +7,9 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"path"
+	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -16,7 +19,7 @@ import (
 	"github.com/smeshkov/gomock/config"
 )
 
-var zeroDuration = time.Duration(0)
+// var zeroDuration = time.Duration(0)
 
 // GET /healthcheck
 func healthcheckHandler(w http.ResponseWriter, r *http.Request) *appError {
@@ -34,8 +37,10 @@ func versionHandler(version string) func(rw http.ResponseWriter, req *http.Reque
 	}
 }
 
-func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *client) func(rw http.ResponseWriter, req *http.Request) *appError {
-	ops, errCnt, errCodes := setupFails(endpoint)
+func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *client,
+	mockPath string) func(http.ResponseWriter, *http.Request) *appError {
+	errCnt, errCodes := setupFails(endpoint)
+	var ops uint64
 
 	return func(w http.ResponseWriter, r *http.Request) *appError {
 
@@ -57,7 +62,7 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 			}
 		}
 
-		// Proxy request to the provide URL.
+		// Proxy request to the provided URL.
 		if endpoint.Proxy != "" {
 			log.Debug("proxying call", zap.String("proxy_to", endpoint.Proxy))
 			u, err := url.Parse(endpoint.Proxy)
@@ -108,12 +113,13 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 
 		// Serve static JSON file from JSONPath if set.
 		if endpoint.JSONPath != "" {
+			p := filepath.Join(mockPath, endpoint.JSONPath)
 			log.Debug("returning contents of JSON path", zap.String("json_path", endpoint.JSONPath))
-			data, err := ioutil.ReadFile(endpoint.JSONPath)
+			data, err := ioutil.ReadFile(p)
 			if err != nil {
 				return &appError{
 					Error:   err,
-					Message: "error in reading from JSON path",
+					Message: fmt.Sprintf("error in reading from JSON path: [%s]", p),
 					Log:     log,
 				}
 			}
@@ -135,7 +141,7 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 	}
 }
 
-func setupFails(endpoint *config.Endpoint) (ops uint64, errCnt uint64, errCodes []int) {
+func setupFails(endpoint *config.Endpoint) (errCnt uint64, errCodes []int) {
 	if endpoint.Errors != nil {
 		if len(endpoint.Errors.Statuses) > 0 {
 			errCodes = endpoint.Errors.Statuses
@@ -151,17 +157,8 @@ func setupFails(endpoint *config.Endpoint) (ops uint64, errCnt uint64, errCodes 
 	return
 }
 
-func setupAPI(mck *config.Mock, router *mux.Router, client *client) {
+func setupAPI(mockPath string, mck *config.Mock, router *mux.Router, client *client) {
 	for _, e := range mck.Endpoints {
-
-		var r *mux.Route
-		if e.Path == "/" {
-			r = router.PathPrefix(e.Path)
-		} else {
-			r = router.Path(e.Path)
-		}
-
-		r = r.Methods(e.Methods...)
 
 		status := e.Status
 		if status <= 0 {
@@ -174,8 +171,23 @@ func setupAPI(mck *config.Mock, router *mux.Router, client *client) {
 			zap.Int("status", status),
 		)
 
+		var r *mux.Router
+		if e.Path == "/" {
+			r = router.PathPrefix(e.Path).Subrouter()
+		} else if strings.HasSuffix(e.Path, "*") {
+			r = router.PathPrefix(path.Dir(e.Path)).Subrouter()
+		} else if e.Path == "*" || e.Path == "" {
+			r = router
+		} else {
+			r = router.Path(e.Path).Subrouter()
+		}
+
+		if len(e.AllowCors) > 0 {
+			r.Use(NewCORS(e.AllowCors...).Middleware)
+		}
+
 		l.Info("setting up path")
 
-		r.Handler(appHandler(apiHandler(l, e, status, client)))
+		r.Methods(e.Methods...).Handler(appHandler(apiHandler(l, e, status, client, mockPath)))
 	}
 }

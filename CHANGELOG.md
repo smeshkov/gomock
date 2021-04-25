@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.5.0
+
+- added `allowCors` endpoint property to configure CORS access;
+- `jspnPath` now correctly resolves files realtive to the root mock JSON file.
+
 ## v0.4.0
 
 - Bumped Go version to 1.16.

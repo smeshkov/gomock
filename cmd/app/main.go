@@ -22,7 +22,6 @@ func main() {
 	flag.Parse()
 
 	var cfg config.Config
-	var mck config.Mock
 	var err error
 
 	cfg, err = config.NewConfig(*configFile)
@@ -32,7 +31,10 @@ func main() {
 
 	config.SetupLog(cfg.Logger.Level)
 
-	mck, err = config.NewMock(*mockFile)
+	var mck config.Mock
+	var mockPath string
+
+	mck, mockPath, err = config.NewMock(*mockFile)
 	if err != nil {
 		zap.L().Warn(fmt.Sprintf("failed to load API configuration %s: %v", *mockFile, err))
 	}
@@ -48,7 +50,7 @@ func main() {
 		ReadTimeout:       cfg.Server.ReadTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
 		Addr:              cfg.Server.Addr,
-		Handler:           app.RegisterHandlers(version, &cfg, &mck),
+		Handler:           app.RegisterHandlers(version, mockPath, &cfg, &mck),
 	}
 
 	zap.L().Info(fmt.Sprintf("starting app on %s (read timeout %s, write timeout %s)",

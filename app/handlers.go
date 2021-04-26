@@ -38,7 +38,7 @@ func versionHandler(version string) func(rw http.ResponseWriter, req *http.Reque
 }
 
 func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *client,
-	mockPath string) func(http.ResponseWriter, *http.Request) *appError {
+	jsonData []byte, db *store) func(http.ResponseWriter, *http.Request) *appError {
 	errCnt, errCodes := setupFails(endpoint)
 	var ops uint64
 
@@ -113,17 +113,7 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 
 		// Serve static JSON file from JSONPath if set.
 		if endpoint.JSONPath != "" {
-			p := filepath.Join(mockPath, endpoint.JSONPath)
-			log.Debug("returning contents of JSON path", zap.String("json_path", endpoint.JSONPath))
-			data, err := ioutil.ReadFile(p)
-			if err != nil {
-				return &appError{
-					Error:   err,
-					Message: fmt.Sprintf("error in reading from JSON path: [%s]", p),
-					Log:     log,
-				}
-			}
-			_, err = w.Write(data)
+			_, err := w.Write(jsonData)
 			if err != nil {
 				return &appError{
 					Error:   err,
@@ -135,8 +125,51 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 		}
 
 		// Serve JSON from API configuration instead.
-		log.Debug("returning object", zap.String("object", fmt.Sprintf("%#v", endpoint.JSON)))
-		writeResponse(w, endpoint.JSON)
+		if endpoint.JSON != nil {
+			log.Debug("returning JSON object", zap.String("object", fmt.Sprintf("%#v", endpoint.JSON)))
+			return writeResponse(w, endpoint.JSON)
+		}
+
+		// Dynamic read/write operation
+		if endpoint.Dynamic != nil {
+			if endpoint.Dynamic.Write != nil {
+				input := map[string]interface{}{}
+				appErr := readRequestJSON(r.Context(), r, &input)
+				if appErr != nil {
+					return appErr
+				}
+				key, err := findKeyInJSON(endpoint.Dynamic.Write.JSON.Key, input)
+				if err != nil {
+					return &appError{
+						Error:   err,
+						Message: "error in finding the key",
+						Log:     log,
+					}
+				}
+				value, err := findValueInJSON(endpoint.Dynamic.Write.JSON.Value, input)
+				if err != nil {
+					return &appError{
+						Error:   err,
+						Message: "error in finding the value",
+						Log:     log,
+					}
+				}
+				log.Sugar().Debugf("writing [%s] under the key [%s]", endpoint.Dynamic.Write.JSON.Name, key)
+				db.Write(endpoint.Dynamic.Write.JSON.Name, key, value)
+			} else if endpoint.Dynamic.Read != nil {
+				key := mux.Vars(r)[endpoint.Dynamic.Read.JSON.KeyParam]
+				value, ok := db.Read(endpoint.Dynamic.Read.JSON.Name, key)
+				if !ok {
+					return &appError{
+						Message: fmt.Sprintf("value not found for key [%s]", key),
+						Log:     log,
+					}
+				}
+				log.Sugar().Debugf("reading [%s] under the key [%s]", endpoint.Dynamic.Read.JSON.Name, key)
+				return writeResponse(w, value)
+			}
+		}
+
 		return nil
 	}
 }
@@ -158,6 +191,7 @@ func setupFails(endpoint *config.Endpoint) (errCnt uint64, errCodes []int) {
 }
 
 func setupAPI(mockPath string, mck *config.Mock, router *mux.Router, client *client) {
+	db := new(store)
 	for _, e := range mck.Endpoints {
 
 		status := e.Status
@@ -188,6 +222,60 @@ func setupAPI(mockPath string, mck *config.Mock, router *mux.Router, client *cli
 
 		l.Info("setting up path")
 
-		r.Methods(e.Methods...).Handler(appHandler(apiHandler(l, e, status, client, mockPath)))
+		jsonData, err := readJSON(mockPath, e.JSONPath)
+		if err != nil {
+			l.Error("error in setting up endpoint")
+			return
+		}
+		r.Methods(e.Methods...).Handler(appHandler(apiHandler(l, e, status, client, jsonData, db)))
 	}
+}
+
+func readJSON(mockPath, jsonPath string) ([]byte, error) {
+	p := filepath.Join(mockPath, jsonPath)
+	return ioutil.ReadFile(p)
+}
+
+func findKeyInJSON(path string, obj map[string]interface{}) (string, error) {
+	parts := strings.Split(path, "/")
+	v := obj
+	for i, p := range parts {
+		v, ok := v[p]
+		if !ok {
+			return "", fmt.Errorf("error in traversing request JSON, attribute [%s] not found for the key [%s]", p, path)
+		}
+		if i < len(parts)-1 {
+			v, ok = v.(map[string]interface{})
+			if !ok {
+				return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the key [%s]", p, path)
+			}
+		} else {
+			s, ok := v.(string)
+			if !ok {
+				return "", fmt.Errorf("error in traversing request JSON, value of key [%s] is not a string for the key [%s]", p, path)
+			}
+			return s, nil
+		}
+	}
+	return "", fmt.Errorf("error in traversing request JSON, no parts for the key [%s]", path)
+}
+
+func findValueInJSON(path string, obj map[string]interface{}) (interface{}, error) {
+	parts := strings.Split(path, "/")
+	v := obj
+	for i, p := range parts {
+		v, ok := v[p]
+		if !ok {
+			return "", fmt.Errorf("error in traversing request JSON, attribute [%s] not found for the value [%s]", p, path)
+		}
+		if i < len(parts)-1 {
+			v, ok = v.(map[string]interface{})
+			if !ok {
+				return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the value [%s]", p, path)
+			}
+		} else {
+			return v, nil
+		}
+	}
+	return nil, fmt.Errorf("error in traversing request JSON, no parts for the value [%s]", path)
 }

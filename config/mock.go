@@ -23,7 +23,21 @@ type Endpoint struct {
 	Proxy     string      `json:"proxy,omitempty"`
 	Errors    *Errors     `json:"errors,omitempty"`
 	AllowCors []string    `json:"allowCors,omitempty"`
-	// Mock     json.RawMessage `json:"mock,omitempty"`
+	Dynamic   *struct {
+		Write *struct {
+			JSON *struct {
+				Name  string `json:"name"`  // entity name
+				Key   string `json:"key"`   // path/to/a/key to store from an incoming JSON
+				Value string `json:"value"` // path/to/a/value to store from an incoming JSON
+			} `json:"json,omitempty"`
+		} `json:"write,omitempty"`
+		Read *struct {
+			JSON *struct {
+				Name     string `json:"name"`     // entity name
+				KeyParam string `json:"keyParam"` // key parameter name from the "path"
+			} `json:"json,omitempty"`
+		} `json:"read,omitempty"`
+	} `json:"dynamic,omitempty"`
 }
 
 // Errors ...

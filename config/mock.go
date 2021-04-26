@@ -33,8 +33,8 @@ type Endpoint struct {
 		} `json:"write,omitempty"`
 		Read *struct {
 			JSON *struct {
-				Name     string `json:"name"`     // entity name
-				KeyParam string `json:"keyParam"` // key parameter name from the "path"
+				Name     string `json:"name"`               // entity name
+				KeyParam string `json:"keyParam,omitempty"` // key parameter name from the "path"
 			} `json:"json,omitempty"`
 		} `json:"read,omitempty"`
 	} `json:"dynamic,omitempty"`

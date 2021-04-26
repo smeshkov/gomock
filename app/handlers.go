@@ -157,8 +157,15 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 				log.Sugar().Debugf("writing [%s] under the key [%s]", endpoint.Dynamic.Write.JSON.Name, key)
 				db.Write(endpoint.Dynamic.Write.JSON.Name, key, value)
 			} else if endpoint.Dynamic.Read != nil {
-				key := mux.Vars(r)[endpoint.Dynamic.Read.JSON.KeyParam]
-				value, ok := db.Read(endpoint.Dynamic.Read.JSON.Name, key)
+				var key string
+				var value interface{}
+				var ok bool
+				if endpoint.Dynamic.Read.JSON.KeyParam == "" {
+					value, ok = db.ReadAll(endpoint.Dynamic.Read.JSON.Name)
+				} else {
+					key = mux.Vars(r)[endpoint.Dynamic.Read.JSON.KeyParam]
+					value, ok = db.Read(endpoint.Dynamic.Read.JSON.Name, key)
+				}
 				if !ok {
 					return &appError{
 						Message: fmt.Sprintf("value not found for key [%s]", key),

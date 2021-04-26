@@ -52,13 +52,13 @@ func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func appErrorf(err error, format string, v ...interface{}) *appError {
-	return &appError{
-		Error:   err,
-		Message: fmt.Sprintf(format, v...),
-		Code:    500,
-	}
-}
+// func appErrorf(err error, format string, v ...interface{}) *appError {
+// 	return &appError{
+// 		Error:   err,
+// 		Message: fmt.Sprintf(format, v...),
+// 		Code:    500,
+// 	}
+// }
 
 // writeResponse writes response to provided ResponseWriter in JSON format.
 func writeResponse(rw http.ResponseWriter, response interface{}) *appError {

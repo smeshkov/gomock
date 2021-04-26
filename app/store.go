@@ -1,22 +1,53 @@
 package app
 
 import (
-	"fmt"
 	"sync"
 )
 
 type store struct {
-	sm sync.Map
+	table map[string]interface{}
+	lock  sync.RWMutex
+}
+
+func newStore() *store {
+	return &store{
+		table: map[string]interface{}{},
+	}
 }
 
 func (s *store) Write(entity, key string, value interface{}) {
-	s.sm.Store(toStoreKey(entity, key), value)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	var table map[string]interface{}
+	v, ok := s.table[entity]
+	if !ok {
+		table = map[string]interface{}{}
+	} else {
+		table = v.(map[string]interface{})
+	}
+	table[key] = value
+	s.table[entity] = table
 }
 
 func (s *store) Read(entity, key string) (interface{}, bool) {
-	return s.sm.Load(toStoreKey(entity, key))
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	v, ok := s.table[entity]
+	if !ok {
+		return nil, false
+	}
+	table := v.(map[string]interface{})
+	obj, ok := table[key]
+	return obj, ok
 }
 
-func toStoreKey(entity, key string) string {
-	return fmt.Sprintf("%s|%s", entity, key)
+func (s *store) ReadAll(entity string) (map[string]interface{}, bool) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	v, ok := s.table[entity]
+	if !ok {
+		return nil, false
+	}
+	table, ok := v.(map[string]interface{})
+	return table, ok
 }

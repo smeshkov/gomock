@@ -14,14 +14,18 @@ For Linux:
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh linux)"
 ```
 
+For Windows:
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh windows)"
+```
+
 ## Usage
 
-1. [Download](https://github.com/smeshkov/gomock/releases/latest) latest release.
-2. Put `mock.json` near to `gomock` binary and start mock server by running `./gomock_darwin_v<version>` (or `./gomock_linux_v<version>`).
+Create JSON file with your mocks and start mock server by running `gomock -mock /path/to/your/mock.json`.
 
-Use `./gomock_darwin_v<version> --help` (or `./gomock_linux_v<version> --help`) for help.
+`mock.json` defines mocks - handlers which will serve provided mocks.
 
-`mock.json` defines mocks - handlers which will provided predefined JSON responses.
+Use `gomock --help` for more information.
 
 `mock.json` example:
 
@@ -79,8 +83,58 @@ Endpoint object in `endpoints` list:
 - `proxy` - proxies requests to the given address;
 - `errors` - helps to setup sampled errors, with the randomised error codes.
 - `allowCors` - list of allowed domains for CORS.
+- `dynamic` - allows to configure dynamic read/write behaviour, i.e. values can be stored and retrieved from the inetrnal store.
 
 `mock.json` is the default name for a mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
+
+## Dynamic mocking
+
+You can store and retrieve values from your mocks by using `dynamic` property.
+
+For writes use `dynamic.write.json`:
+
+```json
+{
+  "port": 8080,
+  "endpoints": [
+    {
+      "methods": [ "POST" ],
+      "path": "/note",
+      "dynamic": {
+        "write": {
+          "json": {
+            "name": "note",
+            "key": "/id", // path to a key inside the incoming request JSON from the client ("id" field in this case)
+            "value": "." // path to a value inside the incoming request JSON from the client (root in this case)
+          }
+        }
+      }
+    }
+  ]
+}
+```
+
+For reads use `dynamic.read.json`:
+
+```json
+{
+  "port": 8080,
+  "endpoints": [
+    {
+      "methods": [ "GET" ],
+      "path": "/note/{noteID:[a-zA-Z0-9-]+}", // uses Gorilla Mux paths
+      "dynamic": {
+        "read": {
+          "json": {
+            "name": "note",
+            "keyParam": "noteID", // path to a key inside the incoming request path from the client ("noteID" param in this case)
+          }
+        }
+      }
+    }
+  ]
+}
+```
 
 ## Changelog
 

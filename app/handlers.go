@@ -198,7 +198,7 @@ func setupFails(endpoint *config.Endpoint) (errCnt uint64, errCodes []int) {
 }
 
 func setupAPI(mockPath string, mck *config.Mock, router *mux.Router, client *client) {
-	db := new(store)
+	db := newStore()
 	for _, e := range mck.Endpoints {
 
 		status := e.Status
@@ -271,6 +271,9 @@ func findValueInJSON(path string, obj map[string]interface{}) (interface{}, erro
 	parts := strings.Split(path, "/")
 	v := obj
 	for i, p := range parts {
+		if p == "" || p == "." {
+			continue
+		}
 		v, ok := v[p]
 		if !ok {
 			return "", fmt.Errorf("error in traversing request JSON, attribute [%s] not found for the value [%s]", p, path)
@@ -284,5 +287,5 @@ func findValueInJSON(path string, obj map[string]interface{}) (interface{}, erro
 			return v, nil
 		}
 	}
-	return nil, fmt.Errorf("error in traversing request JSON, no parts for the value [%s]", path)
+	return v, nil
 }

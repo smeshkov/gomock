@@ -1,11 +1,11 @@
 package app
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"path"
 	"path/filepath"
@@ -37,8 +37,8 @@ func versionHandler(version string) func(rw http.ResponseWriter, req *http.Reque
 	}
 }
 
-func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *client,
-	jsonData []byte, db *store) func(http.ResponseWriter, *http.Request) *appError {
+func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
+	jsonData []byte, proxy *httputil.ReverseProxy, db *store) func(http.ResponseWriter, *http.Request) *appError {
 	errCnt, errCodes := setupFails(endpoint)
 	var ops uint64
 
@@ -64,48 +64,8 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int, client *
 
 		// Proxy request to the provided URL.
 		if endpoint.Proxy != "" {
-			log.Debug("proxying call", zap.String("proxy_to", endpoint.Proxy))
-			u, err := url.Parse(endpoint.Proxy)
-			if err != nil {
-				return &appError{
-					Error:   err,
-					Message: "error in parsing proxy to URL",
-					Log:     log,
-				}
-			}
-			resp, err := client.proxy(r, u)
-			if err != nil {
-				return &appError{
-					Error:   err,
-					Message: "error in proxying to URL",
-					Log:     log,
-				}
-			}
-			for k, vs := range resp.Header {
-				for _, v := range vs {
-					w.Header().Add(k, v)
-				}
-			}
-			buf := new(bytes.Buffer)
-			if resp.Body != nil {
-				_, err = buf.ReadFrom(resp.Body)
-				if err != nil {
-					return &appError{
-						Error:   err,
-						Message: "error in reading response from proxyed URL",
-						Log:     log,
-					}
-				}
-				defer resp.Body.Close()
-				_, err = w.Write(buf.Bytes())
-				if err != nil {
-					return &appError{
-						Error:   err,
-						Message: "error in writing response to client",
-						Log:     log,
-					}
-				}
-			}
+			log.Debug("proxying call")
+			proxy.ServeHTTP(w, r)
 			return nil
 		}
 
@@ -197,7 +157,7 @@ func setupFails(endpoint *config.Endpoint) (errCnt uint64, errCodes []int) {
 	return
 }
 
-func setupAPI(mockPath string, mck *config.Mock, router *mux.Router, client *client) {
+func setupAPI(mockPath string, mck *config.Mock, router *mux.Router) {
 	db := newStore()
 	for _, e := range mck.Endpoints {
 
@@ -210,15 +170,19 @@ func setupAPI(mockPath string, mck *config.Mock, router *mux.Router, client *cli
 			zap.String("path", e.Path),
 			zap.String("methods", fmt.Sprintf("%v", e.Methods)),
 			zap.Int("status", status),
+			zap.Bool("json", e.JSON != nil),
+			zap.Bool("dynamic", e.Dynamic != nil),
+			zap.String("jsonPath", e.JSONPath),
+			zap.String("proxy", e.Proxy),
 		)
 
+		l.Info("setting up endpoint")
+
 		var r *mux.Router
-		if e.Path == "/" {
-			r = router.PathPrefix(e.Path).Subrouter()
+		if e.Path == "/" || e.Path == "*" || e.Path == "" {
+			r = router.PathPrefix("/").Subrouter()
 		} else if strings.HasSuffix(e.Path, "*") {
 			r = router.PathPrefix(path.Dir(e.Path)).Subrouter()
-		} else if e.Path == "*" || e.Path == "" {
-			r = router
 		} else {
 			r = router.Path(e.Path).Subrouter()
 		}
@@ -227,14 +191,30 @@ func setupAPI(mockPath string, mck *config.Mock, router *mux.Router, client *cli
 			r.Use(NewCORS(e.AllowCors...).Middleware)
 		}
 
-		l.Info("setting up path")
+		var err error
 
-		jsonData, err := readJSON(mockPath, e.JSONPath)
-		if err != nil {
-			l.Error("error in setting up endpoint")
-			return
+		var jsonData []byte
+		if e.JSONPath != "" {
+			jsonData, err = readJSON(mockPath, e.JSONPath)
+			if err != nil {
+				zap.L().Sugar().
+					Errorf("error in reading JSON from the path [%s] for path [%s]", e.JSONPath, e.Path)
+				return
+			}
 		}
-		r.Methods(e.Methods...).Handler(appHandler(apiHandler(l, e, status, client, jsonData, db)))
+
+		var proxy *httputil.ReverseProxy
+		if e.Proxy != "" {
+			proxyURL, err := url.Parse(e.Proxy)
+			if err != nil {
+				zap.L().Sugar().
+					Errorf("error in parsing proxy URL [%s] for path", e.Proxy, e.Path)
+				return
+			}
+			proxy = httputil.NewSingleHostReverseProxy(proxyURL)
+		}
+
+		r.Methods(e.Methods...).Handler(appHandler(apiHandler(l, e, status, jsonData, proxy, db)))
 	}
 }
 

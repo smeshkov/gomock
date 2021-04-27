@@ -24,7 +24,7 @@ func RegisterHandlers(version, mockPath string, cfg *config.Config, mck *config.
 	// Shows current version of the App
 	r.Methods(http.MethodGet).Path("/version").Handler(appHandler(versionHandler(version)))
 
-	setupAPI(mockPath, mck, r, newClient())
+	setupAPI(mockPath, mck, r)
 
 	return r
 }

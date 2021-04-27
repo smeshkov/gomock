@@ -14,7 +14,7 @@ func SetupLog(level string) {
 		return
 	}
 	zap.ReplaceGlobals(l)
-	zap.L().Info("logger is ready")
+	zap.L().Sugar().Infof("logger level is set to [%s]", level)
 }
 
 // SyncLog flushes any buffered log entries.

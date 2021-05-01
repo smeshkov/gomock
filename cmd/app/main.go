@@ -18,6 +18,7 @@ var (
 func main() {
 	configFile := flag.String("config", "_resources/config.yml", "Configuration file")
 	mockFile := flag.String("mock", "mock.json", "Mock configuration file")
+	verbose := flag.Bool("verbose", false, "Verbose")
 
 	flag.Parse()
 
@@ -29,7 +30,12 @@ func main() {
 		zap.L().Warn(fmt.Sprintf("failed to load configuration %s: %v", *configFile, err))
 	}
 
-	config.SetupLog(cfg.Logger.Level)
+	logLevel := cfg.Logger.Level
+	if *verbose {
+		logLevel = "debug"
+	}
+
+	config.SetupLog(logLevel)
 
 	var mck config.Mock
 	var mockPath string
@@ -38,7 +44,6 @@ func main() {
 	if err != nil {
 		zap.L().Warn(fmt.Sprintf("failed to load API configuration %s: %v", *mockFile, err))
 	}
-	zap.L().Debug(fmt.Sprintf("mock configuration: %#v", &mck))
 
 	if mck.Port > 0 {
 		cfg.Server.Addr = fmt.Sprintf(":%d", mck.Port)
@@ -53,7 +58,7 @@ func main() {
 		Handler:           app.RegisterHandlers(version, mockPath, &cfg, &mck),
 	}
 
-	zap.L().Info(fmt.Sprintf("starting app on %s (read timeout %s, write timeout %s)",
+	zap.L().Info(fmt.Sprintf("starting proxy app on %s (read timeout %s, write timeout %s)",
 		cfg.Server.Addr, cfg.Server.ReadTimeout.String(), cfg.Server.WriteTimeout.String()))
 	if err = srv.ListenAndServe(); err != nil {
 		zap.L().Fatal(fmt.Sprintf("failed to start server: %v", err))

@@ -1,49 +1,87 @@
 package app
 
 import (
+	"fmt"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"strings"
-	"time"
 
 	"go.uber.org/zap"
 )
 
-type client struct {
-	c *http.Client
+type Proxy struct {
+	host   *url.URL
+	target *url.URL
+	proxy  *httputil.ReverseProxy
+	log    *zap.Logger
 }
 
-func newClient() *client {
-	return &client{
-		c: &http.Client{
-			Timeout: 120 * time.Second,
-		},
-	}
-}
-
-func (c *client) proxy(req *http.Request, url *url.URL) (*http.Response, error) {
-	var sb strings.Builder
-	sb.WriteString(url.String())
-	if req.URL.Path != "" {
-		sb.WriteString(req.URL.Path)
-	}
-	if req.URL.RawQuery != "" {
-		sb.WriteString("?" + req.URL.RawQuery)
-	}
-
-	addr := sb.String()
-	zap.L().Debug("proxying call", zap.String("method", req.Method), zap.String("address", addr))
-
-	r, err := http.NewRequest(req.Method, addr, req.Body)
+func newProxy(serverAddr, target string, log *zap.Logger) (*Proxy, error) {
+	hostURL, err := url.Parse("http://localhost" + serverAddr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error in parsing host URL [%s]", serverAddr)
+	}
+	proxyURL, err := url.Parse(target)
+	if err != nil {
+		return nil, fmt.Errorf("error in parsing proxy URL [%s]", target)
+	}
+	return &Proxy{
+		host:   hostURL,
+		target: proxyURL,
+		proxy:  httputil.NewSingleHostReverseProxy(proxyURL),
+		log:    log,
+	}, nil
+}
+
+func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	wrapper := &responseWriterWrapper{
+		ResponseWriter: w,
+		statusCode:     http.StatusOK,
 	}
 
-	for k, vs := range req.Header {
-		for _, v := range vs {
-			r.Header.Add(k, v)
-		}
+	// ---> request handling
+	newReqQuery, err := p.adjustRedirectQuery(r.URL)
+	if err != nil {
+		p.log.Sugar().Errorf("error in adjusting request URI redirect location: %v", err)
+		return
+	}
+	r.URL.RawQuery = url.QueryEscape(newReqQuery)
+
+	p.log.Sugar().Debugf("proxying call to [%s]", r.RequestURI)
+	p.proxy.ServeHTTP(wrapper, r)
+
+	// ---> response handling
+
+	if wrapper.statusCode < 300 || wrapper.statusCode >= 400 {
+		return
 	}
 
-	return c.c.Do(r)
+	// handle redirect url
+	location := w.Header().Get("Location")
+	if location != "" {
+		redirect := p.adjustRedirectURL(location)
+		p.log.Sugar().Debugf("redirect location [%s]", redirect)
+		http.Redirect(w, r, redirect, wrapper.statusCode)
+	}
+}
+
+func (p *Proxy) adjustRedirectURL(location string) string {
+	targetAddr := p.target.String()
+	hostAddr := p.host.String()
+	location = strings.Replace(location, targetAddr, hostAddr, -1)
+	if i := strings.Index(location, "?"); i != -1 {
+		query, _ := url.QueryUnescape(location[i+1:])
+		query = url.QueryEscape(strings.Replace(query, targetAddr, hostAddr, -1))
+		return location[:i] + "?" + query
+	}
+	return location
+}
+
+func (p *Proxy) adjustRedirectQuery(u *url.URL) (string, error) {
+	q, err := url.QueryUnescape(u.RawQuery)
+	if err != nil {
+		return "", fmt.Errorf("error in decoding query part of the location: %w", err)
+	}
+	return url.QueryEscape(strings.Replace(q, p.target.String(), p.host.String(), -1)), nil
 }

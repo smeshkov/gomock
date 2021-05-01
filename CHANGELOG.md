@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.6.0
+
+- added `dynamic` endpoint property to dynamically store and retrieve values from your mocks;
+- improved `proxy` mode, so it actually works now;
+- added `-verbose` option.
+
 ## v0.5.0
 
 - added `allowCors` endpoint property to configure CORS access;

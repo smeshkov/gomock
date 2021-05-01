@@ -24,7 +24,7 @@ func RegisterHandlers(version, mockPath string, cfg *config.Config, mck *config.
 	// Shows current version of the App
 	r.Methods(http.MethodGet).Path("/version").Handler(appHandler(versionHandler(version)))
 
-	setupAPI(mockPath, mck, r, newClient())
+	setupAPI(cfg, mockPath, mck, r)
 
 	return r
 }
@@ -52,13 +52,13 @@ func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func appErrorf(err error, format string, v ...interface{}) *appError {
-	return &appError{
-		Error:   err,
-		Message: fmt.Sprintf(format, v...),
-		Code:    500,
-	}
-}
+// func appErrorf(err error, format string, v ...interface{}) *appError {
+// 	return &appError{
+// 		Error:   err,
+// 		Message: fmt.Sprintf(format, v...),
+// 		Code:    500,
+// 	}
+// }
 
 // writeResponse writes response to provided ResponseWriter in JSON format.
 func writeResponse(rw http.ResponseWriter, response interface{}) *appError {

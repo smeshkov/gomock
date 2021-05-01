@@ -7,16 +7,14 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gorilla/sessions"
 	"go.uber.org/zap"
 )
 
 type Proxy struct {
-	host      *url.URL
-	target    *url.URL
-	proxy     *httputil.ReverseProxy
-	log       *zap.Logger
-	sessStore *sessions.CookieStore
+	host   *url.URL
+	target *url.URL
+	proxy  *httputil.ReverseProxy
+	log    *zap.Logger
 }
 
 func newProxy(serverAddr, target string, log *zap.Logger) (*Proxy, error) {
@@ -29,11 +27,10 @@ func newProxy(serverAddr, target string, log *zap.Logger) (*Proxy, error) {
 		return nil, fmt.Errorf("error in parsing proxy URL [%s]", target)
 	}
 	return &Proxy{
-		host:      hostURL,
-		target:    proxyURL,
-		proxy:     httputil.NewSingleHostReverseProxy(proxyURL),
-		log:       log,
-		sessStore: sessions.NewCookieStore([]byte("proxy")),
+		host:   hostURL,
+		target: proxyURL,
+		proxy:  httputil.NewSingleHostReverseProxy(proxyURL),
+		log:    log,
 	}, nil
 }
 

@@ -1,6 +1,13 @@
 # Go Mock
 
-Light weight mock server written in [Go](https://golang.org/).
+Light weight mock server written in [Go](https://golang.org/). 
+
+Supported features:
+
+* good old mocked JSON responses for HTTP methods and URI paths;
+* custom error behaviours;
+* proxying;
+* dynamic results, as in store data from an incoming JSON and then retrieve it.
 
 ## Installation
 

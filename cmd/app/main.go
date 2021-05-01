@@ -58,7 +58,7 @@ func main() {
 		Handler:           app.RegisterHandlers(version, mockPath, &cfg, &mck),
 	}
 
-	zap.L().Info(fmt.Sprintf("starting app on %s (read timeout %s, write timeout %s)",
+	zap.L().Info(fmt.Sprintf("starting proxy app on %s (read timeout %s, write timeout %s)",
 		cfg.Server.Addr, cfg.Server.ReadTimeout.String(), cfg.Server.WriteTimeout.String()))
 	if err = srv.ListenAndServe(); err != nil {
 		zap.L().Fatal(fmt.Sprintf("failed to start server: %v", err))

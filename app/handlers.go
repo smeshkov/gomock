@@ -5,8 +5,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
@@ -38,11 +36,13 @@ func versionHandler(version string) func(rw http.ResponseWriter, req *http.Reque
 }
 
 func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
-	jsonData []byte, proxy *httputil.ReverseProxy, db *store) func(http.ResponseWriter, *http.Request) *appError {
+	jsonData []byte, proxy *Proxy, db *store) func(http.ResponseWriter, *http.Request) *appError {
 	errCnt, errCodes := setupFails(endpoint)
 	var ops uint64
 
 	return func(w http.ResponseWriter, r *http.Request) *appError {
+
+		log.Sugar().Debugf("handling [%s]", r.RequestURI)
 
 		if endpoint.Delay > 0 {
 			time.Sleep(time.Duration(endpoint.Delay) * time.Millisecond)
@@ -64,7 +64,6 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
 
 		// Proxy request to the provided URL.
 		if endpoint.Proxy != "" {
-			log.Debug("proxying call")
 			proxy.ServeHTTP(w, r)
 			return nil
 		}
@@ -150,14 +149,14 @@ func setupFails(endpoint *config.Endpoint) (errCnt uint64, errCodes []int) {
 		}
 		errCnt = uint64(1.0 / endpoint.Errors.Sample)
 		zap.L().Debug("every Nth request will fail",
-			zap.String("path", endpoint.Path),
+			zap.String("endpoint", endpoint.Path),
 			zap.Uint64("every_nth_err", errCnt),
 			zap.String("errCodes", fmt.Sprintf("%v", errCodes)))
 	}
 	return
 }
 
-func setupAPI(mockPath string, mck *config.Mock, router *mux.Router) {
+func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *mux.Router) {
 	db := newStore()
 	for _, e := range mck.Endpoints {
 
@@ -167,13 +166,13 @@ func setupAPI(mockPath string, mck *config.Mock, router *mux.Router) {
 		}
 
 		l := zap.L().With(
-			zap.String("path", e.Path),
+			zap.String("endpoint", e.Path),
 			zap.String("methods", fmt.Sprintf("%v", e.Methods)),
-			zap.Int("status", status),
-			zap.Bool("json", e.JSON != nil),
-			zap.Bool("dynamic", e.Dynamic != nil),
-			zap.String("jsonPath", e.JSONPath),
-			zap.String("proxy", e.Proxy),
+			// zap.Int("status", status),
+			// zap.Bool("json", e.JSON != nil),
+			// zap.Bool("dynamic", e.Dynamic != nil),
+			// zap.String("jsonPath", e.JSONPath),
+			// zap.String("proxy", e.Proxy),
 		)
 
 		l.Info("setting up endpoint")
@@ -197,21 +196,20 @@ func setupAPI(mockPath string, mck *config.Mock, router *mux.Router) {
 		if e.JSONPath != "" {
 			jsonData, err = readJSON(mockPath, e.JSONPath)
 			if err != nil {
-				zap.L().Sugar().
+				l.Sugar().
 					Errorf("error in reading JSON from the path [%s] for path [%s]", e.JSONPath, e.Path)
 				return
 			}
 		}
 
-		var proxy *httputil.ReverseProxy
+		var proxy *Proxy
 		if e.Proxy != "" {
-			proxyURL, err := url.Parse(e.Proxy)
+			proxy, err = newProxy(cfg.Server.Addr, e.Proxy, l)
 			if err != nil {
-				zap.L().Sugar().
-					Errorf("error in parsing proxy URL [%s] for path", e.Proxy, e.Path)
+				l.Sugar().
+					Errorf("error in creating a proxy for path [%s]: %v", e.Path, err)
 				return
 			}
-			proxy = httputil.NewSingleHostReverseProxy(proxyURL)
 		}
 
 		r.Methods(e.Methods...).Handler(appHandler(apiHandler(l, e, status, jsonData, proxy, db)))

@@ -89,7 +89,7 @@ Endpoint object in `endpoints` list:
 
 ## Dynamic mocking
 
-You can store and retrieve values from your mocks by using `dynamic` property.
+You can store and retrieve values in your mocks by using `dynamic` property.
 
 For writes use `dynamic.write.json`:
 
@@ -104,8 +104,8 @@ For writes use `dynamic.write.json`:
         "write": {
           "json": {
             "name": "note",
-            "key": "/id", // path to a key inside the incoming request JSON from the client ("id" field in this case)
-            "value": "." // path to a value inside the incoming request JSON from the client (root in this case)
+            "key": "/id", // path to an entity's key inside the incoming request JSON from the client ("id" field in this case)
+            "value": "." // path to an entity's value inside the incoming request JSON from the client (root in this case)
           }
         }
       }
@@ -127,7 +127,7 @@ For reads use `dynamic.read.json`:
         "read": {
           "json": {
             "name": "note",
-            "keyParam": "noteID", // path to a key inside the incoming request path from the client ("noteID" param in this case)
+            "keyParam": "noteID", // path to an entity's key inside the incoming request path from the client ("noteID" param in this case)
           }
         }
       }

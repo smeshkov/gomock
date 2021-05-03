@@ -19,8 +19,14 @@ func main() {
 	configFile := flag.String("config", "_resources/config.yml", "Configuration file")
 	mockFile := flag.String("mock", "mock.json", "Mock configuration file")
 	verbose := flag.Bool("verbose", false, "Verbose")
+	ver := flag.Bool("version", false, "prints version of Tagify")
 
 	flag.Parse()
+
+	if *ver {
+		fmt.Println(version)
+		return
+	}
 
 	var cfg config.Config
 	var err error

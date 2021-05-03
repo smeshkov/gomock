@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.7.0
+
+- added `-version` option.
+
 ## v0.6.0
 
 - added `dynamic` endpoint property to dynamically store and retrieve values from your mocks;

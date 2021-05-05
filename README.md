@@ -18,12 +18,12 @@ For MacOS:
 
 For Linux:
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh linux)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh)" linux
 ```
 
 For Windows:
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh windows)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh)" windows
 ```
 
 ## Usage

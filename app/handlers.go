@@ -182,6 +182,14 @@ func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *mux
 			r = router.PathPrefix("/").Subrouter()
 		} else if strings.HasSuffix(e.Path, "*") {
 			r = router.PathPrefix(path.Dir(e.Path)).Subrouter()
+		} else if strings.Contains(e.Path, "*") {
+			var i int
+			newPath := e.Path
+			for strings.Contains(newPath, "*") {
+				newPath = strings.Replace(newPath, "*", fmt.Sprintf("{subpath-%d}", i), 1)
+				i++
+			}
+			r = router.Path(newPath).Subrouter()
 		} else {
 			r = router.Path(e.Path).Subrouter()
 		}

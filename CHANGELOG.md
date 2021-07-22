@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.0
+
+- added support for subpath wildcards.
+
 ## v0.7.0
 
 - added `-version` option.

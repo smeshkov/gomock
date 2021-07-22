@@ -16,3 +16,6 @@ coverage.txt
 /gomock_linux*
 /gomock
 vendor/
+*.json
+*.yml
+*.yaml

@@ -88,8 +88,9 @@ Endpoint object in `endpoints` list:
 - `json` - one way of defining response payload, will output given JSON;
 - `jsonPath` - another way of defining response payload, will read file from the given path (can be relative to the root mock JSON file) and write its contents to response;
 - `proxy` - proxies requests to the given address;
-- `errors` - helps to setup sampled errors, with the randomised error codes.
-- `allowCors` - list of allowed domains for CORS.
+- `static` - serves static files;
+- `errors` - helps to setup sampled errors, with the randomised error codes;
+- `allowCors` - list of allowed domains for CORS;
 - `dynamic` - allows to configure dynamic read/write behaviour, i.e. values can be stored and retrieved from the inetrnal store.
 
 `mock.json` is the default name for a mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`

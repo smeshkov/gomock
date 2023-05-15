@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.9.1
+
+- added darwin arm64 binary;
+- release for Go 1.20.
+
 ## v0.9.0
 
 - migrated from Gorilla to Chi for HTTP handling;

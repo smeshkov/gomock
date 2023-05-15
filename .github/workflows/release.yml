@@ -15,7 +15,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.16    
+        go-version: 1.20
 
     - name: Cache Go modules
       uses: actions/cache@v2
@@ -28,6 +28,9 @@ jobs:
     - name: Install
       run: go get -t -v ./...
 
+    - name: Test
+      run: go test -coverprofile=coverage.txt -covermode=atomic
+
     - name: Get the version 
       id: get_version 
       run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
@@ -36,6 +39,7 @@ jobs:
       run: |
         ./_bin/build.sh linux ${{ steps.get_version.outputs.VERSION }}
         ./_bin/build.sh darwin ${{ steps.get_version.outputs.VERSION }}
+        ./_bin/build.sh darwin ${{ steps.get_version.outputs.VERSION }} arm64
         ./_bin/build.sh windows ${{ steps.get_version.outputs.VERSION }}
       shell: bash
 

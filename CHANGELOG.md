@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.9.2
+
+- removed use of deprecated "io/ioutil".
+
 ## v0.9.1
 
 - added darwin arm64 binary;

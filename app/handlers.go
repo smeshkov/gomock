@@ -2,9 +2,9 @@ package app
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -243,7 +243,7 @@ func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *chi
 
 func readJSON(mockPath, jsonPath string) ([]byte, error) {
 	p := filepath.Join(mockPath, jsonPath)
-	return ioutil.ReadFile(p)
+	return os.ReadFile(p)
 }
 
 func findKeyInJSON(path string, obj map[string]interface{}) (string, error) {

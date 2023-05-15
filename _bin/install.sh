@@ -1,15 +1,27 @@
-#!/bin/sh
+#!/bin/bash
 
 BINARY="gomock"
 USER_BIN=$HOME/bin
 OS="$1"
+ARCH="$2"
 
 if [ -z "$OS" ]; then
-    echo "setting OS to darwin"
     OS="darwin"
+    echo "setting OS to ${OS}"
 fi
 
-link=$(curl -s https://api.github.com/repos/smeshkov/gomock/releases/latest | grep "browser_download_url.*gomock_${OS}" | cut -d : -f 2,3 | tr -d \")
+if [ -z "$ARCH" ]; then
+    ARCH="amd64"
+    echo "setting ARCH to ${ARCH}"
+fi
+
+echo "installing ${BINARY} for ${OS} ${ARCH}"
+
+link=$(curl -s "https://api.github.com/repos/smeshkov/gomock/releases/latest" | grep "browser_download_url.*${BINARY}_${OS}_${ARCH}" | cut -d : -f 2,3 | tr -d \" | tr -d ' ')
+if [ -z "$link" ]; then
+    echo "can't find ${BINARY} binary"
+    exit 1
+fi
 
 echo "downloading ${BINARY} from $link"
 

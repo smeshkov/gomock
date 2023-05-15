@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
 	"github.com/smeshkov/gomock/config"
@@ -14,15 +14,13 @@ import (
 // RegisterHandlers registers all handlers of the application.
 func RegisterHandlers(version, mockPath string, cfg *config.Config, mck *config.Mock) http.Handler {
 
-	// Use gorilla/mux for rich routing.
-	// See http://www.gorillatoolkit.org/pkg/mux
-	r := mux.NewRouter()
+	r := chi.NewRouter()
 
 	// Shows if app is healthy
-	r.Methods(http.MethodGet).Path("/healthcheck").Handler(appHandler(healthcheckHandler))
+	r.Method(http.MethodGet, "/healthcheck", appHandler(healthcheckHandler))
 
 	// Shows current version of the App
-	r.Methods(http.MethodGet).Path("/version").Handler(appHandler(versionHandler(version)))
+	r.Method(http.MethodGet, "/version", appHandler(versionHandler(version)))
 
 	setupAPI(cfg, mockPath, mck, r)
 

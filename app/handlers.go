@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
 	"github.com/smeshkov/gomock/config"
@@ -122,7 +122,7 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
 				if endpoint.Dynamic.Read.JSON.KeyParam == "" {
 					value, ok = db.ReadAll(endpoint.Dynamic.Read.JSON.Name)
 				} else {
-					key = mux.Vars(r)[endpoint.Dynamic.Read.JSON.KeyParam]
+					key = chi.URLParam(r, endpoint.Dynamic.Read.JSON.KeyParam)
 					value, ok = db.Read(endpoint.Dynamic.Read.JSON.Name, key)
 				}
 				if !ok {
@@ -156,7 +156,7 @@ func setupFails(endpoint *config.Endpoint) (errCnt uint64, errCodes []int) {
 	return
 }
 
-func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *mux.Router) {
+func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *chi.Mux) {
 	db := newStore()
 	for _, e := range mck.Endpoints {
 
@@ -168,20 +168,24 @@ func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *mux
 		l := zap.L().With(
 			zap.String("endpoint", e.Path),
 			zap.String("methods", fmt.Sprintf("%v", e.Methods)),
-			// zap.Int("status", status),
-			// zap.Bool("json", e.JSON != nil),
-			// zap.Bool("dynamic", e.Dynamic != nil),
-			// zap.String("jsonPath", e.JSONPath),
-			// zap.String("proxy", e.Proxy),
 		)
 
-		l.Info("setting up endpoint")
+		if l.Core().Enabled(zap.DebugLevel) {
+			l = l.With(
+				zap.Int("status", status),
+				zap.Bool("json", e.JSON != nil),
+				zap.Bool("dynamic", e.Dynamic != nil),
+				zap.String("jsonPath", e.JSONPath),
+				zap.String("proxy", e.Proxy),
+				zap.String("static", e.Static),
+			)
+		}
 
-		var r *mux.Router
+		var route string
 		if e.Path == "/" || e.Path == "*" || e.Path == "" {
-			r = router.PathPrefix("/").Subrouter()
+			route = "/"
 		} else if strings.HasSuffix(e.Path, "*") {
-			r = router.PathPrefix(path.Dir(e.Path)).Subrouter()
+			route = path.Dir(e.Path)
 		} else if strings.Contains(e.Path, "*") {
 			var i int
 			newPath := e.Path
@@ -189,38 +193,51 @@ func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *mux
 				newPath = strings.Replace(newPath, "*", fmt.Sprintf("{subpath-%d}", i), 1)
 				i++
 			}
-			r = router.Path(newPath).Subrouter()
+			route = newPath
 		} else {
-			r = router.Path(e.Path).Subrouter()
+			route = e.Path
 		}
 
-		if len(e.AllowCors) > 0 {
-			r.Use(NewCORS(e.AllowCors...).Middleware)
-		}
+		l = l.With(zap.String("route", route))
+		l.Info("setting up endpoint")
 
-		var err error
+		router.Route(route, func(r chi.Router) {
+			if len(e.AllowCors) > 0 {
+				r.Use(NewCORS(e.AllowCors...).Middleware)
+			}
 
-		var jsonData []byte
-		if e.JSONPath != "" {
-			jsonData, err = readJSON(mockPath, e.JSONPath)
-			if err != nil {
-				l.Sugar().
-					Errorf("error in reading JSON from the path [%s] for path [%s]", e.JSONPath, e.Path)
+			var err error
+
+			var jsonData []byte
+			if e.JSONPath != "" {
+				jsonData, err = readJSON(mockPath, e.JSONPath)
+				if err != nil {
+					l.Sugar().
+						Errorf("error in reading JSON from the path [%s] for path [%s]", e.JSONPath, e.Path)
+					return
+				}
+			}
+
+			var proxy *Proxy
+			if e.Proxy != "" {
+				proxy, err = newProxy(cfg.Server.Addr, e.Proxy, l)
+				if err != nil {
+					l.Sugar().
+						Errorf("error in creating a proxy for path [%s]: %v", e.Path, err)
+					return
+				}
+			}
+
+			if e.Static != "" {
+				r.HandleFunc("/*", http.FileServer(http.Dir(e.Static)).ServeHTTP)
 				return
 			}
-		}
 
-		var proxy *Proxy
-		if e.Proxy != "" {
-			proxy, err = newProxy(cfg.Server.Addr, e.Proxy, l)
-			if err != nil {
-				l.Sugar().
-					Errorf("error in creating a proxy for path [%s]: %v", e.Path, err)
-				return
+			for _, m := range e.Methods {
+				r.Method(m, "/*", appHandler(apiHandler(l, e, status, jsonData, proxy, db)))
 			}
-		}
+		})
 
-		r.Methods(e.Methods...).Handler(appHandler(apiHandler(l, e, status, jsonData, proxy, db)))
 	}
 }
 

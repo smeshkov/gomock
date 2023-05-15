@@ -1,6 +1,6 @@
 .PHONY: deps clean build
 
-TAG=0.9.2
+TAG=0.9.3
 BINARY=gomock
 DIST_DIR=_dist
 OS=darwin

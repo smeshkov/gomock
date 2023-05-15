@@ -1,13 +1,10 @@
 # Changelog
 
-## v0.9.2
-
-- removed use of deprecated "io/ioutil".
-
-## v0.9.1
+## v0.9.3
 
 - added darwin arm64 binary;
-- release for Go 1.20.
+- release for Go 1.20;
+- removed use of deprecated "io/ioutil".
 
 ## v0.9.0
 

@@ -8,7 +8,7 @@ ARCH=arm64
 VERSION=tip
 USER_BIN=${HOME}/bin
 DATE=`date +%m-%d-%Y-%H-%M-%S`
-MOCK=mock.json
+MOCK=_dist/mock.json
 
 deps:
 	go get -u ./...

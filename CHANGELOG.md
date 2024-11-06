@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.10.0
+
+- handle more complex patterns in the paths like `/foo*`;
+- bumped Go version to 1.23.
+
 ## v0.9.4
 
 - added darwin arm64 binary;

@@ -184,7 +184,7 @@ func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *chi
 		var route string
 		if e.Path == "/" || e.Path == "*" || e.Path == "" {
 			route = "/"
-		} else if strings.HasSuffix(e.Path, "*") {
+		} else if strings.HasSuffix(e.Path, "/*") {
 			route = path.Dir(e.Path)
 		} else if strings.Contains(e.Path, "*") {
 			var i int

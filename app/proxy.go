@@ -46,7 +46,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.log.Sugar().Errorf("error in adjusting request URI redirect location: %v", err)
 		return
 	}
-	r.URL.RawQuery = url.QueryEscape(newReqQuery)
+	r.URL.RawQuery = newReqQuery
 
 	p.log.Sugar().Debugf("proxying call to [%s]", r.RequestURI)
 	p.proxy.ServeHTTP(wrapper, r)
@@ -83,5 +83,5 @@ func (p *Proxy) adjustRedirectQuery(u *url.URL) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error in decoding query part of the location: %w", err)
 	}
-	return url.QueryEscape(strings.Replace(q, p.target.String(), p.host.String(), -1)), nil
+	return strings.Replace(q, p.target.String(), p.host.String(), -1), nil
 }

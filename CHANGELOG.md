@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.1
+
+- fixed bug, with the unnecessary `url.QueryEscape` for the query params when proxying requests.
+
 ## v0.10.0
 
 - handle more complex patterns in the paths like `/foo*`;

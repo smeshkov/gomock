@@ -36,16 +36,16 @@ func main() {
 		return
 	}
 
-	// 초기 로깅 설정
+	// Initialize logging
 	config.SetupLog("info")
 
-	// 종료 신호를 처리할 채널
+	// Channel to handle termination signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// 서버 실행 루프
+	// Server execution loop
 	for {
-		// 초기 설정 로드
+		// Load initial configuration
 		cfg, err := config.NewConfig(*configFile)
 		if err != nil {
 			zap.L().Warn(fmt.Sprintf("failed to load configuration %s: %v", *configFile, err))
@@ -65,7 +65,7 @@ func main() {
 			zap.L().Warn(fmt.Sprintf("failed to load API configuration %s: %v", *mockFile, err))
 		}
 
-		// 서버 실행 및 감시
+		// Start and monitor server
 		serverCtx, cancelServer := context.WithCancel(context.Background())
 		var wg sync.WaitGroup
 
@@ -75,28 +75,28 @@ func main() {
 			runServer(serverCtx, &cfg, &mck, version, mockPath)
 		}()
 
-		// 설정 변경 감시 활성화
+		// Enable configuration file monitoring
 		if *watch {
 			go watchConfigFiles(*configFile, *mockFile, cancelServer)
 		}
 
 		select {
 		case <-sigChan:
-			// 종료 신호 수신 시 서버 종료
+			// Terminate server upon receiving termination signal
 			zap.L().Info("received termination signal, shutting down...")
 			cancelServer()
 			wg.Wait()
 			return
 		case <-serverCtx.Done():
-			// 설정 변경으로 서버가 재시작될 때
+			// Restart server upon configuration change
 			zap.L().Info("restarting server due to configuration change...")
 			wg.Wait()
-			// 루프를 계속 돌면서 새로운 설정을 반영한 서버 실행
+			// Continue loop to restart server with updated configuration
 		}
 	}
 }
 
-// 서버 실행 함수
+// Server execution function
 func runServer(ctx context.Context, cfg *config.Config, mck *config.Mock, version, mockPath string) {
 	srv := &http.Server{
 		ReadHeaderTimeout: cfg.Server.ReadTimeout,
@@ -127,7 +127,7 @@ func runServer(ctx context.Context, cfg *config.Config, mck *config.Mock, versio
 	}
 }
 
-// 설정 파일 변경 감지 및 서버 재시작
+// Monitor configuration file changes and restart server
 func watchConfigFiles(configPath, mockPath string, cancelServer context.CancelFunc) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -135,7 +135,7 @@ func watchConfigFiles(configPath, mockPath string, cancelServer context.CancelFu
 	}
 	defer watcher.Close()
 
-	// 감시할 파일 추가
+	// Add files to monitor
 	files := []string{configPath, mockPath}
 	for _, file := range files {
 		err = watcher.Add(file)
@@ -152,8 +152,8 @@ func watchConfigFiles(configPath, mockPath string, cancelServer context.CancelFu
 			}
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				zap.L().Info(fmt.Sprintf("file %s changed, restarting server...", event.Name))
-				cancelServer() // 서버 종료 트리거
-				return         // 감시 루프 종료, main 루프에서 서버 재시작
+				cancelServer() // Trigger server shutdown
+				return         // Exit monitoring loop, server will restart in main loop
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {

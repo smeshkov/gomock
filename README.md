@@ -1,27 +1,30 @@
 # Go Mock
 
-Light weight mock server written in [Go](https://golang.org/). 
+Light weight mock server written in [Go](https://golang.org/).
 
 Supported features:
 
-* good old mocked JSON responses for HTTP methods and URI paths;
-* custom error behaviours;
-* proxying;
-* dynamic results, as in store data from an incoming JSON and then retrieve it.
+- good old mocked JSON responses for HTTP methods and URI paths;
+- custom error behaviours;
+- proxying;
+- dynamic results, as in store data from an incoming JSON and then retrieve it.
 
 ## Installation
 
 For MacOS:
+
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh)"
 ```
 
 For Linux:
+
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh)" linux
 ```
 
 For Windows:
+
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/smeshkov/gomock/master/_bin/install.sh)" windows
 ```
@@ -41,7 +44,7 @@ Use `gomock --help` for more information.
   "port": 8080,
   "endpoints": [
     {
-      "methods": [ "GET" ],
+      "methods": ["GET"],
       "status": 200,
       "path": "/users",
       "jsonPath": "./users.json"
@@ -53,7 +56,7 @@ Use `gomock --help` for more information.
         "name": "name",
         "address": "address"
       },
-      "allowCors": [ "example.com" ]
+      "allowCors": ["example.com"]
     },
     {
       "methods": ["POST"],
@@ -65,7 +68,7 @@ Use `gomock --help` for more information.
       }
     },
     {
-      "methods": [ "POST" ],
+      "methods": ["POST"],
       "path": "/api/*",
       "delay": 200,
       "url": "http://localhost:8090"
@@ -92,6 +95,7 @@ Endpoint object in `endpoints` list:
 - `errors` - helps to setup sampled errors, with the randomised error codes;
 - `allowCors` - list of allowed domains for CORS;
 - `dynamic` - allows to configure dynamic read/write behaviour, i.e. values can be stored and retrieved from the inetrnal store.
+- `watch` - allows to watch over the config files changes and reload automatically.
 
 `mock.json` is the default name for a mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
 
@@ -106,7 +110,7 @@ For writes use `dynamic.write.json`:
   "port": 8080,
   "endpoints": [
     {
-      "methods": [ "POST" ],
+      "methods": ["POST"],
       "path": "/note",
       "dynamic": {
         "write": {
@@ -129,13 +133,13 @@ For reads use `dynamic.read.json`:
   "port": 8080,
   "endpoints": [
     {
-      "methods": [ "GET" ],
+      "methods": ["GET"],
       "path": "/note/{noteID:[a-zA-Z0-9-]+}", // uses Gorilla Mux paths
       "dynamic": {
         "read": {
           "json": {
             "name": "note",
-            "keyParam": "noteID", // path to an entity's key inside the incoming request path from the client ("noteID" param in this case)
+            "keyParam": "noteID" // path to an entity's key inside the incoming request path from the client ("noteID" param in this case)
           }
         }
       }

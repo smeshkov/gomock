@@ -1,7 +1,7 @@
 package config
 
 import (
-	"io/ioutil"
+	"os"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -32,7 +32,8 @@ func NewConfig(file string) (cfg Config, err error) {
 	// Logger ...
 	cfg.Logger.Level = "info"
 
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
+
 	if err != nil {
 		return
 	}

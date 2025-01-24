@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -54,7 +54,7 @@ func NewMock(file string) (mock Mock, path string, err error) {
 		return
 	}
 	path = filepath.Dir(path)
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return
 	}

@@ -1,6 +1,6 @@
 .PHONY: deps clean build
 
-TAG=0.10.1
+TAG=0.11.0
 BINARY=gomock
 DIST_DIR=_dist
 OS=darwin
@@ -26,7 +26,7 @@ test:
 # 	./_dist/${BINARY}_${OS}_${ARCH}_${VERSION} -mock ${MOCK}
 
 run:
-	go run cmd/app/main.go -mock ${MOCK} -verbose
+	go run cmd/app/main.go -mock ${MOCK} -watch -verbose
 
 tag:
 	./_bin/tag.sh ${TAG}

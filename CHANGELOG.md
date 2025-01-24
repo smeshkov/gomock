@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.11.0
+
+- added watch config implemented by @mrchypark;
+- fixed logger for hotreload (thanks to @mrchypark);
+- updated `ioutile` to `os` (thanks to @mrchypark).
+
 ## v0.10.1
 
 - fixed bug, with the unnecessary `url.QueryEscape` for the query params when proxying requests.

@@ -12,31 +12,31 @@ var (
 	loggerLock sync.Mutex
 )
 
-// SetupLog 설정 함수 (초기화 시 1회 실행, 이후 레벨만 변경)
+// SetupLog - setup function (runs once on initialization, then only changes levels)
 func SetupLog(level string) {
 	loggerLock.Lock()
 	defer loggerLock.Unlock()
 
 	if logger == nil {
-		// 처음 실행할 때만 로거 생성
+		// create logger only on first run
 		newLogger, err := newLog(level)
 		if err != nil {
 			fmt.Printf("failed to setup logger: %v\n", err)
 			return
 		}
 		logger = newLogger
-		zap.ReplaceGlobals(logger) // 전역 로거 설정
+		zap.ReplaceGlobals(logger) // setting up a global logger
 		zap.L().Sugar().Infof("logger initialized with level [%s]", level)
 	} else {
-		// 기존 로거가 있으면 레벨만 변경
+		// if you have an existing logger, just change the level
 		zap.L().Sugar().Infof("updating logger level to [%s]", level)
-		_ = logger.Sync() // 기존 로거 버퍼 플러시
+		_ = logger.Sync() // flush existing logger buffer
 		newLogger, _ := newLog(level)
 		logger = newLogger
 	}
 }
 
-// SyncLog 버퍼 플러시 함수
+// SyncLog - buffer flush function
 func SyncLog() {
 	loggerLock.Lock()
 	defer loggerLock.Unlock()
@@ -46,7 +46,7 @@ func SyncLog() {
 	}
 }
 
-// newLog 내부 함수 (로거 생성)
+// newLog - internal function (create logger)
 func newLog(level string) (*zap.Logger, error) {
 	if level != "info" {
 		return zap.NewDevelopment()

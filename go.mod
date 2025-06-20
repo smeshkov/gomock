@@ -3,7 +3,7 @@ module github.com/smeshkov/gomock
 go 1.23
 
 require (
-	github.com/go-chi/chi/v5 v5.0.8
+	github.com/go-chi/chi/v5 v5.2.2
 	github.com/gorilla/handlers v1.5.1
 	github.com/stretchr/testify v1.4.0
 	go.uber.org/zap v1.13.0

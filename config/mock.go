@@ -4,12 +4,55 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 )
 
 // Mock represents configuration of API.
 type Mock struct {
-	Port      int         `json:"port,omitempty"`
-	Endpoints []*Endpoint `json:"endpoints"`
+	Port         int         `json:"port,omitempty"`
+	Addr         string      `json:"addr,omitempty"`
+	ReadTimeout  string      `json:"readTimeout,omitempty"`
+	WriteTimeout string      `json:"writeTimeout,omitempty"`
+	IdleTimeout  string      `json:"idleTimeout,omitempty"`
+	LogLevel     string      `json:"logLevel,omitempty"`
+	Endpoints    []*Endpoint `json:"endpoints"`
+}
+
+// ToConfig converts Mock server settings into a Config with sensible defaults.
+func (m *Mock) ToConfig() Config {
+	var cfg Config
+
+	// Defaults
+	cfg.Server.Addr = ":8080"
+	cfg.Server.ReadTimeout = 5 * time.Second
+	cfg.Server.WriteTimeout = 5 * time.Second
+	cfg.Server.IdleTimeout = 5 * time.Second
+	cfg.Logger.Level = "info"
+
+	// Apply port (addr takes precedence if both set)
+	if m.Port > 0 {
+		cfg.Server.Addr = ":" + strconv.Itoa(m.Port)
+	}
+	if m.Addr != "" {
+		cfg.Server.Addr = m.Addr
+	}
+
+	if d, err := time.ParseDuration(m.ReadTimeout); err == nil {
+		cfg.Server.ReadTimeout = d
+	}
+	if d, err := time.ParseDuration(m.WriteTimeout); err == nil {
+		cfg.Server.WriteTimeout = d
+	}
+	if d, err := time.ParseDuration(m.IdleTimeout); err == nil {
+		cfg.Server.IdleTimeout = d
+	}
+
+	if m.LogLevel != "" {
+		cfg.Logger.Level = m.LogLevel
+	}
+
+	return cfg
 }
 
 // Endpoint represents API endpoint configuration.

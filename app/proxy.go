@@ -69,10 +69,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (p *Proxy) adjustRedirectURL(location string) string {
 	targetAddr := p.target.String()
 	hostAddr := p.host.String()
-	location = strings.Replace(location, targetAddr, hostAddr, -1)
+	location = strings.ReplaceAll(location, targetAddr, hostAddr)
 	if i := strings.Index(location, "?"); i != -1 {
 		query, _ := url.QueryUnescape(location[i+1:])
-		query = url.QueryEscape(strings.Replace(query, targetAddr, hostAddr, -1))
+		query = url.QueryEscape(strings.ReplaceAll(query, targetAddr, hostAddr))
 		return location[:i] + "?" + query
 	}
 	return location
@@ -83,5 +83,5 @@ func (p *Proxy) adjustRedirectQuery(u *url.URL) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("error in decoding query part of the location: %w", err)
 	}
-	return strings.Replace(q, p.target.String(), p.host.String(), -1), nil
+	return strings.ReplaceAll(q, p.target.String(), p.host.String()), nil
 }

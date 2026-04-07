@@ -128,7 +128,7 @@ func watchConfigFiles(mockPath string, cancelServer context.CancelFunc) {
 	if err != nil {
 		zap.L().Fatal(fmt.Sprintf("failed to create watcher: %v", err))
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	err = watcher.Add(mockPath)
 	if err != nil {

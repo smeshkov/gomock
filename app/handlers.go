@@ -248,19 +248,20 @@ func readJSON(mockPath, jsonPath string) ([]byte, error) {
 
 func findKeyInJSON(path string, obj map[string]interface{}) (string, error) {
 	parts := strings.Split(path, "/")
-	v := obj
+	var current interface{} = obj
 	for i, p := range parts {
-		v, ok := v[p]
+		m, ok := current.(map[string]interface{})
+		if !ok {
+			return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the key [%s]", p, path)
+		}
+		val, ok := m[p]
 		if !ok {
 			return "", fmt.Errorf("error in traversing request JSON, attribute [%s] not found for the key [%s]", p, path)
 		}
 		if i < len(parts)-1 {
-			v, ok = v.(map[string]interface{})
-			if !ok {
-				return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the key [%s]", p, path)
-			}
+			current = val
 		} else {
-			s, ok := v.(string)
+			s, ok := val.(string)
 			if !ok {
 				return "", fmt.Errorf("error in traversing request JSON, value of key [%s] is not a string for the key [%s]", p, path)
 			}
@@ -272,23 +273,24 @@ func findKeyInJSON(path string, obj map[string]interface{}) (string, error) {
 
 func findValueInJSON(path string, obj map[string]interface{}) (interface{}, error) {
 	parts := strings.Split(path, "/")
-	v := obj
+	var current interface{} = obj
 	for i, p := range parts {
 		if p == "" || p == "." {
 			continue
 		}
-		v, ok := v[p]
+		m, ok := current.(map[string]interface{})
+		if !ok {
+			return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the value [%s]", p, path)
+		}
+		val, ok := m[p]
 		if !ok {
 			return "", fmt.Errorf("error in traversing request JSON, attribute [%s] not found for the value [%s]", p, path)
 		}
 		if i < len(parts)-1 {
-			v, ok = v.(map[string]interface{})
-			if !ok {
-				return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the value [%s]", p, path)
-			}
+			current = val
 		} else {
-			return v, nil
+			return val, nil
 		}
 	}
-	return v, nil
+	return current, nil
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.13.0
+
+- Added CLI flags (`-port`, `-addr`, `-log-level`, `-read-timeout`, `-write-timeout`, `-idle-timeout`) to override mock config values;
+- Added `go run` usage example in README for running without installation.
+
 ## v0.12.0
 
 - Switched to single JSON config file (see "Mock configuration file") and removed yaml config file to avoid mixing formats;

@@ -31,6 +31,14 @@ For Windows:
 
 ## Usage
 
+### Run without installation
+
+```bash
+go run github.com/smeshkov/gomock/cmd/app@latest -mock /path/to/your/mock.json
+```
+
+### Run with installation
+
 Create JSON file with your mocks and start mock server by running `gomock -mock /path/to/your/mock.json`.
 
 `mock.json` defines mocks - handlers which will serve provided mocks.
@@ -105,6 +113,23 @@ Endpoint object in `endpoints` list:
 - `dynamic` - allows to configure dynamic read/write behaviour, i.e. values can be stored and retrieved from the internal store.
 
 `mock.json` is the default name for a mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
+
+### CLI flags
+
+All CLI flags override the corresponding values in `mock.json`:
+
+| Flag | Description | Example |
+|------|-------------|---------|
+| `-mock` | Path to mock configuration file | `-mock api.json` |
+| `-port` | Server port | `-port 3000` |
+| `-addr` | Server address (overrides `-port`) | `-addr :3000` |
+| `-log-level` | Log level (`info` or `debug`) | `-log-level debug` |
+| `-read-timeout` | Read timeout (Go duration) | `-read-timeout 10s` |
+| `-write-timeout` | Write timeout (Go duration) | `-write-timeout 10s` |
+| `-idle-timeout` | Idle timeout (Go duration) | `-idle-timeout 60s` |
+| `-verbose` | Shorthand for `-log-level debug` | `-verbose` |
+| `-watch` | Watch config file and reload on changes | `-watch` |
+| `-version` | Print version | `-version` |
 
 ## Dynamic mocking
 

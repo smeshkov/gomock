@@ -18,7 +18,7 @@ func (wrp *responseWriterWrapper) WriteHeader(code int) {
 }
 
 // readRequestJSON ...
-func readRequestJSON(c context.Context, r *http.Request, object interface{}) *appError {
+func readRequestJSON(_ context.Context, r *http.Request, object any) *appError {
 	err := json.NewDecoder(r.Body).Decode(object)
 	if err != nil {
 		return &appError{

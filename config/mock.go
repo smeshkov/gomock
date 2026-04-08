@@ -62,7 +62,7 @@ type Endpoint struct {
 	Path      string      `json:"path"`
 	Delay     int         `json:"delay,omitempty"`
 	JSONPath  string      `json:"jsonPath,omitempty"` // path to the JSON file with endpoint
-	JSON      interface{} `json:"json,omitempty"`
+	JSON      any `json:"json,omitempty"`
 	Proxy     string      `json:"proxy,omitempty"`
 	Static    string      `json:"static,omitempty"` // static file server
 	Errors    *Errors     `json:"errors,omitempty"`

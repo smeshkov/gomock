@@ -27,6 +27,12 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Verbose")
 	ver := flag.Bool("version", false, "prints version of gomock")
 	watch := flag.Bool("watch", false, "Watch config file changes and reload automatically")
+	flagPort := flag.Int("port", 0, "Server port (overrides mock config)")
+	flagAddr := flag.String("addr", "", "Server address e.g. :3000 (overrides port and mock config)")
+	flagLogLevel := flag.String("log-level", "", "Log level: info or debug (overrides mock config)")
+	flagReadTimeout := flag.String("read-timeout", "", "Read timeout as Go duration e.g. 10s (overrides mock config)")
+	flagWriteTimeout := flag.String("write-timeout", "", "Write timeout as Go duration e.g. 10s (overrides mock config)")
+	flagIdleTimeout := flag.String("idle-timeout", "", "Idle timeout as Go duration e.g. 60s (overrides mock config)")
 
 	flag.Parse()
 
@@ -53,12 +59,17 @@ func main() {
 
 		cfg := mck.ToConfig()
 
-		logLevel := cfg.Logger.Level
-		if *verbose {
-			logLevel = "debug"
-		}
+		cfg.ApplyOverrides(config.CLIOverrides{
+			Port:         *flagPort,
+			Addr:         *flagAddr,
+			LogLevel:     *flagLogLevel,
+			Verbose:      *verbose,
+			ReadTimeout:  *flagReadTimeout,
+			WriteTimeout: *flagWriteTimeout,
+			IdleTimeout:  *flagIdleTimeout,
+		})
 
-		config.SetupLog(logLevel)
+		config.SetupLog(cfg.Logger.Level)
 
 		// Start and monitor server
 		serverCtx, cancelServer := context.WithCancel(context.Background())

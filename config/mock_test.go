@@ -62,6 +62,72 @@ func TestToConfig_LogLevel(t *testing.T) {
 	assert.Equal(t, "debug", cfg.Logger.Level)
 }
 
+func TestApplyOverrides_Port(t *testing.T) {
+	m := Mock{}
+	cfg := m.ToConfig()
+	cfg.ApplyOverrides(CLIOverrides{Port: 9090})
+
+	assert.Equal(t, ":9090", cfg.Server.Addr)
+}
+
+func TestApplyOverrides_AddrOverridesPort(t *testing.T) {
+	m := Mock{}
+	cfg := m.ToConfig()
+	cfg.ApplyOverrides(CLIOverrides{Port: 9090, Addr: ":3000"})
+
+	assert.Equal(t, ":3000", cfg.Server.Addr)
+}
+
+func TestApplyOverrides_Timeouts(t *testing.T) {
+	m := Mock{}
+	cfg := m.ToConfig()
+	cfg.ApplyOverrides(CLIOverrides{
+		ReadTimeout:  "10s",
+		WriteTimeout: "20s",
+		IdleTimeout:  "30s",
+	})
+
+	assert.Equal(t, 10*time.Second, cfg.Server.ReadTimeout)
+	assert.Equal(t, 20*time.Second, cfg.Server.WriteTimeout)
+	assert.Equal(t, 30*time.Second, cfg.Server.IdleTimeout)
+}
+
+func TestApplyOverrides_InvalidTimeoutKeepsOriginal(t *testing.T) {
+	m := Mock{}
+	cfg := m.ToConfig()
+	cfg.ApplyOverrides(CLIOverrides{ReadTimeout: "bad"})
+
+	assert.Equal(t, 5*time.Second, cfg.Server.ReadTimeout)
+}
+
+func TestApplyOverrides_LogLevel(t *testing.T) {
+	m := Mock{}
+	cfg := m.ToConfig()
+	cfg.ApplyOverrides(CLIOverrides{LogLevel: "debug"})
+
+	assert.Equal(t, "debug", cfg.Logger.Level)
+}
+
+func TestApplyOverrides_VerboseOverridesLogLevel(t *testing.T) {
+	m := Mock{LogLevel: "info"}
+	cfg := m.ToConfig()
+	cfg.ApplyOverrides(CLIOverrides{LogLevel: "info", Verbose: true})
+
+	assert.Equal(t, "debug", cfg.Logger.Level)
+}
+
+func TestApplyOverrides_EmptyKeepsDefaults(t *testing.T) {
+	m := Mock{}
+	cfg := m.ToConfig()
+	cfg.ApplyOverrides(CLIOverrides{})
+
+	assert.Equal(t, ":8080", cfg.Server.Addr)
+	assert.Equal(t, 5*time.Second, cfg.Server.ReadTimeout)
+	assert.Equal(t, 5*time.Second, cfg.Server.WriteTimeout)
+	assert.Equal(t, 5*time.Second, cfg.Server.IdleTimeout)
+	assert.Equal(t, "info", cfg.Logger.Level)
+}
+
 func TestNewMock_WithServerFields(t *testing.T) {
 	content := `{
 		"port": 9090,

@@ -57,16 +57,16 @@ func (m *Mock) ToConfig() Config {
 
 // Endpoint represents API endpoint configuration.
 type Endpoint struct {
-	Methods   []string    `json:"methods,omitempty"`
-	Status    int         `json:"status,omitempty"`
-	Path      string      `json:"path"`
-	Delay     int         `json:"delay,omitempty"`
-	JSONPath  string      `json:"jsonPath,omitempty"` // path to the JSON file with endpoint
-	JSON      any `json:"json,omitempty"`
-	Proxy     string      `json:"proxy,omitempty"`
-	Static    string      `json:"static,omitempty"` // static file server
-	Errors    *Errors     `json:"errors,omitempty"`
-	AllowCors []string    `json:"allowCors,omitempty"`
+	Methods   []string `json:"methods,omitempty"`
+	Status    int      `json:"status,omitempty"`
+	Path      string   `json:"path"`
+	Delay     int      `json:"delay,omitempty"`
+	JSONPath  string   `json:"jsonPath,omitempty"` // path to the JSON file with endpoint
+	JSON      any      `json:"json,omitempty"`
+	Proxy     string   `json:"proxy,omitempty"`
+	Static    string   `json:"static,omitempty"` // static file server
+	Errors    *Errors  `json:"errors,omitempty"`
+	AllowCors []string `json:"allowCors,omitempty"`
 	Dynamic   *struct {
 		Write *struct {
 			JSON *struct {

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.14.0
+
+- Modernised the codebase;
+- Replaced "go.uber.org/zap" with "log/slog".
+
 ## v0.13.0
 
 - Added CLI flags (`-port`, `-addr`, `-log-level`, `-read-timeout`, `-write-timeout`, `-idle-timeout`) to override mock config values;

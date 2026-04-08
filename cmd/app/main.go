@@ -1,7 +1,9 @@
+// Package main is the entrypoint for the gomock server.
 package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -18,9 +20,9 @@ import (
 	"github.com/smeshkov/gomock/config"
 )
 
-var (
-	version = "untagged"
-)
+const shutdownTimeout = 5 * time.Second
+
+var version = "untagged"
 
 func main() {
 	mockFile := flag.String("mock", "mock.json", "Mock configuration file")
@@ -37,87 +39,85 @@ func main() {
 	flag.Parse()
 
 	if *ver {
-		fmt.Println(version)
+		_, _ = fmt.Fprintln(os.Stdout, version)
+
 		return
 	}
 
-	// Initialize logging
 	config.SetupLog("info")
 
-	// Channel to handle termination signals
+	overrides := config.CLIOverrides{
+		Port:         *flagPort,
+		Addr:         *flagAddr,
+		LogLevel:     *flagLogLevel,
+		Verbose:      *verbose,
+		ReadTimeout:  *flagReadTimeout,
+		WriteTimeout: *flagWriteTimeout,
+		IdleTimeout:  *flagIdleTimeout,
+	}
+
+	serverLoop(*mockFile, *watch, overrides)
+}
+
+func serverLoop(mockFile string, watch bool, overrides config.CLIOverrides) {
+	// Channel to handle termination signals.
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	// Server execution loop
 	for {
-		var mck config.Mock
-		var mockPath string
-		mck, mockPath, err := config.NewMock(*mockFile)
+		mck, mockPath, err := config.NewMock(mockFile)
 		if err != nil {
-			zap.L().Warn(fmt.Sprintf("failed to load mock configuration %s: %v", *mockFile, err))
+			zap.L().Warn(fmt.Sprintf("failed to load mock configuration %s: %v", mockFile, err))
 		}
 
 		cfg := mck.ToConfig()
-
-		cfg.ApplyOverrides(config.CLIOverrides{
-			Port:         *flagPort,
-			Addr:         *flagAddr,
-			LogLevel:     *flagLogLevel,
-			Verbose:      *verbose,
-			ReadTimeout:  *flagReadTimeout,
-			WriteTimeout: *flagWriteTimeout,
-			IdleTimeout:  *flagIdleTimeout,
-		})
-
+		cfg.ApplyOverrides(overrides)
 		config.SetupLog(cfg.Logger.Level)
 
-		// Start and monitor server
+		// Start and monitor server.
 		serverCtx, cancelServer := context.WithCancel(context.Background())
-		var wg sync.WaitGroup
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		var waitGroup sync.WaitGroup
+
+		waitGroup.Go(func() {
 			runServer(serverCtx, &cfg, &mck, version, mockPath)
-		}()
+		})
 
-		// Enable configuration file monitoring
-		if *watch {
-			go watchConfigFiles(*mockFile, cancelServer)
+		if watch {
+			go watchConfigFiles(mockFile, cancelServer)
 		}
 
 		select {
 		case <-sigChan:
-			// Terminate server upon receiving termination signal
 			zap.L().Info("received termination signal, shutting down...")
 			cancelServer()
-			wg.Wait()
+			waitGroup.Wait()
+
 			return
 		case <-serverCtx.Done():
-			// Restart server upon configuration change
 			zap.L().Info("restarting server due to configuration change...")
-			wg.Wait()
-			// Continue loop to restart server with updated configuration
+			waitGroup.Wait()
 		}
 	}
 }
 
-// Server execution function
-func runServer(ctx context.Context, cfg *config.Config, mck *config.Mock, version, mockPath string) {
+// runServer starts the HTTP server and blocks until ctx is cancelled.
+func runServer(ctx context.Context, cfg *config.Config, mck *config.Mock, ver, mockPath string) {
 	srv := &http.Server{
 		ReadHeaderTimeout: cfg.Server.ReadTimeout,
 		IdleTimeout:       cfg.Server.IdleTimeout,
 		ReadTimeout:       cfg.Server.ReadTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
 		Addr:              cfg.Server.Addr,
-		Handler:           app.RegisterHandlers(version, mockPath, cfg, mck),
+		Handler:           app.RegisterHandlers(ver, mockPath, cfg, mck),
 	}
 
 	go func() {
 		zap.L().Info(fmt.Sprintf("starting proxy app on %s (read timeout %s, write timeout %s)",
 			cfg.Server.Addr, cfg.Server.ReadTimeout.String(), cfg.Server.WriteTimeout.String()))
 
-		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+		err := srv.ListenAndServe()
+		if !errors.Is(err, http.ErrServerClosed) {
 			zap.L().Fatal(fmt.Sprintf("failed to start server: %v", err))
 		}
 	}()
@@ -125,20 +125,22 @@ func runServer(ctx context.Context, cfg *config.Config, mck *config.Mock, versio
 	<-ctx.Done()
 	zap.L().Info("shutting down server...")
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 	defer cancel()
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	err := srv.Shutdown(shutdownCtx)
+	if err != nil {
 		zap.L().Fatal(fmt.Sprintf("server shutdown failed: %v", err))
 	}
 }
 
-// Monitor configuration file changes and restart server
+// watchConfigFiles monitors configuration file changes and restarts server.
 func watchConfigFiles(mockPath string, cancelServer context.CancelFunc) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		zap.L().Fatal(fmt.Sprintf("failed to create watcher: %v", err))
 	}
+
 	defer func() { _ = watcher.Close() }()
 
 	err = watcher.Add(mockPath)
@@ -152,15 +154,18 @@ func watchConfigFiles(mockPath string, cancelServer context.CancelFunc) {
 			if !ok {
 				return
 			}
+
 			if event.Op&fsnotify.Write == fsnotify.Write {
 				zap.L().Info(fmt.Sprintf("file %s changed, restarting server...", event.Name))
 				cancelServer() // Trigger server shutdown
-				return         // Exit monitoring loop, server will restart in main loop
+
+				return // Exit monitoring loop, server will restart in main loop
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
 			}
+
 			zap.L().Error(fmt.Sprintf("watcher error: %v", err))
 		}
 	}

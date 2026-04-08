@@ -1,4 +1,4 @@
-package config
+package config_test
 
 import (
 	"os"
@@ -8,11 +8,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/smeshkov/gomock/config"
 )
 
 func TestToConfig_Defaults(t *testing.T) {
-	m := Mock{}
-	cfg := m.ToConfig()
+	t.Parallel()
+
+	mock := config.Mock{}
+	cfg := mock.ToConfig()
 
 	assert.Equal(t, ":8080", cfg.Server.Addr)
 	assert.Equal(t, 5*time.Second, cfg.Server.ReadTimeout)
@@ -22,26 +26,32 @@ func TestToConfig_Defaults(t *testing.T) {
 }
 
 func TestToConfig_PortOverride(t *testing.T) {
-	m := Mock{Port: 9090}
-	cfg := m.ToConfig()
+	t.Parallel()
+
+	mock := config.Mock{Port: 9090}
+	cfg := mock.ToConfig()
 
 	assert.Equal(t, ":9090", cfg.Server.Addr)
 }
 
 func TestToConfig_AddrOverridesPort(t *testing.T) {
-	m := Mock{Port: 9090, Addr: ":3000"}
-	cfg := m.ToConfig()
+	t.Parallel()
+
+	mock := config.Mock{Port: 9090, Addr: ":3000"}
+	cfg := mock.ToConfig()
 
 	assert.Equal(t, ":3000", cfg.Server.Addr)
 }
 
 func TestToConfig_Timeouts(t *testing.T) {
-	m := Mock{
+	t.Parallel()
+
+	mock := config.Mock{
 		ReadTimeout:  "10s",
 		WriteTimeout: "20s",
 		IdleTimeout:  "30s",
 	}
-	cfg := m.ToConfig()
+	cfg := mock.ToConfig()
 
 	assert.Equal(t, 10*time.Second, cfg.Server.ReadTimeout)
 	assert.Equal(t, 20*time.Second, cfg.Server.WriteTimeout)
@@ -49,39 +59,49 @@ func TestToConfig_Timeouts(t *testing.T) {
 }
 
 func TestToConfig_InvalidTimeoutKeepsDefault(t *testing.T) {
-	m := Mock{ReadTimeout: "not-a-duration"}
-	cfg := m.ToConfig()
+	t.Parallel()
+
+	mock := config.Mock{ReadTimeout: "not-a-duration"}
+	cfg := mock.ToConfig()
 
 	assert.Equal(t, 5*time.Second, cfg.Server.ReadTimeout)
 }
 
 func TestToConfig_LogLevel(t *testing.T) {
-	m := Mock{LogLevel: "debug"}
-	cfg := m.ToConfig()
+	t.Parallel()
+
+	mock := config.Mock{LogLevel: "debug"}
+	cfg := mock.ToConfig()
 
 	assert.Equal(t, "debug", cfg.Logger.Level)
 }
 
 func TestApplyOverrides_Port(t *testing.T) {
-	m := Mock{}
-	cfg := m.ToConfig()
-	cfg.ApplyOverrides(CLIOverrides{Port: 9090})
+	t.Parallel()
+
+	mock := config.Mock{}
+	cfg := mock.ToConfig()
+	cfg.ApplyOverrides(config.CLIOverrides{Port: 9090})
 
 	assert.Equal(t, ":9090", cfg.Server.Addr)
 }
 
 func TestApplyOverrides_AddrOverridesPort(t *testing.T) {
-	m := Mock{}
-	cfg := m.ToConfig()
-	cfg.ApplyOverrides(CLIOverrides{Port: 9090, Addr: ":3000"})
+	t.Parallel()
+
+	mock := config.Mock{}
+	cfg := mock.ToConfig()
+	cfg.ApplyOverrides(config.CLIOverrides{Port: 9090, Addr: ":3000"})
 
 	assert.Equal(t, ":3000", cfg.Server.Addr)
 }
 
 func TestApplyOverrides_Timeouts(t *testing.T) {
-	m := Mock{}
-	cfg := m.ToConfig()
-	cfg.ApplyOverrides(CLIOverrides{
+	t.Parallel()
+
+	mock := config.Mock{}
+	cfg := mock.ToConfig()
+	cfg.ApplyOverrides(config.CLIOverrides{
 		ReadTimeout:  "10s",
 		WriteTimeout: "20s",
 		IdleTimeout:  "30s",
@@ -93,33 +113,41 @@ func TestApplyOverrides_Timeouts(t *testing.T) {
 }
 
 func TestApplyOverrides_InvalidTimeoutKeepsOriginal(t *testing.T) {
-	m := Mock{}
-	cfg := m.ToConfig()
-	cfg.ApplyOverrides(CLIOverrides{ReadTimeout: "bad"})
+	t.Parallel()
+
+	mock := config.Mock{}
+	cfg := mock.ToConfig()
+	cfg.ApplyOverrides(config.CLIOverrides{ReadTimeout: "bad"})
 
 	assert.Equal(t, 5*time.Second, cfg.Server.ReadTimeout)
 }
 
 func TestApplyOverrides_LogLevel(t *testing.T) {
-	m := Mock{}
-	cfg := m.ToConfig()
-	cfg.ApplyOverrides(CLIOverrides{LogLevel: "debug"})
+	t.Parallel()
+
+	mock := config.Mock{}
+	cfg := mock.ToConfig()
+	cfg.ApplyOverrides(config.CLIOverrides{LogLevel: "debug"})
 
 	assert.Equal(t, "debug", cfg.Logger.Level)
 }
 
 func TestApplyOverrides_VerboseOverridesLogLevel(t *testing.T) {
-	m := Mock{LogLevel: "info"}
-	cfg := m.ToConfig()
-	cfg.ApplyOverrides(CLIOverrides{LogLevel: "info", Verbose: true})
+	t.Parallel()
+
+	mock := config.Mock{LogLevel: "info"}
+	cfg := mock.ToConfig()
+	cfg.ApplyOverrides(config.CLIOverrides{LogLevel: "info", Verbose: true})
 
 	assert.Equal(t, "debug", cfg.Logger.Level)
 }
 
 func TestApplyOverrides_EmptyKeepsDefaults(t *testing.T) {
-	m := Mock{}
-	cfg := m.ToConfig()
-	cfg.ApplyOverrides(CLIOverrides{})
+	t.Parallel()
+
+	mock := config.Mock{}
+	cfg := mock.ToConfig()
+	cfg.ApplyOverrides(config.CLIOverrides{})
 
 	assert.Equal(t, ":8080", cfg.Server.Addr)
 	assert.Equal(t, 5*time.Second, cfg.Server.ReadTimeout)
@@ -129,6 +157,8 @@ func TestApplyOverrides_EmptyKeepsDefaults(t *testing.T) {
 }
 
 func TestNewMock_WithServerFields(t *testing.T) {
+	t.Parallel()
+
 	content := `{
 		"port": 9090,
 		"addr": ":3000",
@@ -146,11 +176,11 @@ func TestNewMock_WithServerFields(t *testing.T) {
 
 	dir := t.TempDir()
 	file := filepath.Join(dir, "mock.json")
-	require.NoError(t, os.WriteFile(file, []byte(content), 0644))
+	require.NoError(t, os.WriteFile(file, []byte(content), 0o600))
 
-	mck, path, err := NewMock(file)
+	mck, mockPath, err := config.NewMock(file)
 	require.NoError(t, err)
-	assert.Equal(t, dir, path)
+	assert.Equal(t, dir, mockPath)
 	assert.Equal(t, 9090, mck.Port)
 	assert.Equal(t, ":3000", mck.Addr)
 	assert.Equal(t, "10s", mck.ReadTimeout)

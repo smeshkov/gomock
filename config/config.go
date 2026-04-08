@@ -1,3 +1,4 @@
+// Package config handles application and mock configuration.
 package config
 
 import (
@@ -30,26 +31,35 @@ type CLIOverrides struct {
 }
 
 // ApplyOverrides applies CLI flag overrides to the config.
-func (c *Config) ApplyOverrides(o CLIOverrides) {
-	if o.Port > 0 {
-		c.Server.Addr = ":" + strconv.Itoa(o.Port)
+func (c *Config) ApplyOverrides(overrides CLIOverrides) {
+	if overrides.Port > 0 {
+		c.Server.Addr = ":" + strconv.Itoa(overrides.Port)
 	}
-	if o.Addr != "" {
-		c.Server.Addr = o.Addr
+
+	if overrides.Addr != "" {
+		c.Server.Addr = overrides.Addr
 	}
-	if d, err := time.ParseDuration(o.ReadTimeout); err == nil {
-		c.Server.ReadTimeout = d
+
+	readTimeout, err := time.ParseDuration(overrides.ReadTimeout)
+	if err == nil {
+		c.Server.ReadTimeout = readTimeout
 	}
-	if d, err := time.ParseDuration(o.WriteTimeout); err == nil {
-		c.Server.WriteTimeout = d
+
+	writeTimeout, err := time.ParseDuration(overrides.WriteTimeout)
+	if err == nil {
+		c.Server.WriteTimeout = writeTimeout
 	}
-	if d, err := time.ParseDuration(o.IdleTimeout); err == nil {
-		c.Server.IdleTimeout = d
+
+	idleTimeout, err := time.ParseDuration(overrides.IdleTimeout)
+	if err == nil {
+		c.Server.IdleTimeout = idleTimeout
 	}
-	if o.LogLevel != "" {
-		c.Logger.Level = o.LogLevel
+
+	if overrides.LogLevel != "" {
+		c.Logger.Level = overrides.LogLevel
 	}
-	if o.Verbose {
+
+	if overrides.Verbose {
 		c.Logger.Level = "debug"
 	}
 }

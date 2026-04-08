@@ -1,3 +1,4 @@
+// Package app contains the HTTP layer for the mock server.
 package app
 
 import (
@@ -13,18 +14,17 @@ import (
 
 // RegisterHandlers registers all handlers of the application.
 func RegisterHandlers(version, mockPath string, cfg *config.Config, mck *config.Mock) http.Handler {
-
-	r := chi.NewRouter()
+	router := chi.NewRouter()
 
 	// Shows if app is healthy
-	r.Method(http.MethodGet, "/healthcheck", appHandler(healthcheckHandler))
+	router.Method(http.MethodGet, "/healthcheck", appHandler(healthcheckHandler))
 
 	// Shows current version of the App
-	r.Method(http.MethodGet, "/version", appHandler(versionHandler(version)))
+	router.Method(http.MethodGet, "/version", appHandler(versionHandler(version)))
 
-	setupAPI(cfg, mockPath, mck, r)
+	setupAPI(cfg, mockPath, mck, router)
 
-	return r
+	return router
 }
 
 // http://blog.golang.org/error-handling-and-go
@@ -37,31 +37,26 @@ type appError struct {
 	Log     *zap.Logger
 }
 
-func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if e := fn(w, r); e != nil { // e is *appError, not os.Error.
-		l := e.Log
-		if l == nil {
-			l = zap.L()
+func (fn appHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
+	appErr := fn(writer, req)
+	if appErr != nil {
+		logger := appErr.Log
+		if logger == nil {
+			logger = zap.L()
 		}
-		l.Error(fmt.Sprintf("handler error: status code: %d, message: %s, underlying err: %#v",
-			e.Code, e.Message, e.Error))
 
-		http.Error(w, e.Message, e.Code)
+		logger.Error(fmt.Sprintf("handler error: status code: %d, message: %s, underlying err: %#v",
+			appErr.Code, appErr.Message, appErr.Error))
+
+		http.Error(writer, appErr.Message, appErr.Code)
 	}
 }
 
-// func appErrorf(err error, format string, v ...interface{}) *appError {
-// 	return &appError{
-// 		Error:   err,
-// 		Message: fmt.Sprintf(format, v...),
-// 		Code:    500,
-// 	}
-// }
-
 // writeResponse writes response to provided ResponseWriter in JSON format.
-func writeResponse(rw http.ResponseWriter, response any) *appError {
-	rw.Header().Set("Content-Type", "application/json")
-	err := json.NewEncoder(rw).Encode(response)
+func writeResponse(writer http.ResponseWriter, response any) *appError {
+	writer.Header().Set("Content-Type", "application/json")
+
+	err := json.NewEncoder(writer).Encode(response)
 	if err != nil {
 		return &appError{
 			Error:   err,
@@ -69,5 +64,6 @@ func writeResponse(rw http.ResponseWriter, response any) *appError {
 			Code:    http.StatusInternalServerError,
 		}
 	}
+
 	return nil
 }

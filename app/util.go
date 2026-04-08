@@ -9,6 +9,7 @@ import (
 
 type responseWriterWrapper struct {
 	http.ResponseWriter
+
 	statusCode int
 }
 
@@ -17,9 +18,8 @@ func (wrp *responseWriterWrapper) WriteHeader(code int) {
 	wrp.statusCode = code
 }
 
-// readRequestJSON ...
-func readRequestJSON(_ context.Context, r *http.Request, object any) *appError {
-	err := json.NewDecoder(r.Body).Decode(object)
+func readRequestJSON(_ context.Context, req *http.Request, object any) *appError {
+	err := json.NewDecoder(req.Body).Decode(object)
 	if err != nil {
 		return &appError{
 			Error:   err,
@@ -27,5 +27,6 @@ func readRequestJSON(_ context.Context, r *http.Request, object any) *appError {
 			Code:    http.StatusBadRequest,
 		}
 	}
+
 	return nil
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.12.0
+
+- Switched to single JSON config file (see "Mock configuration file") and removed yaml config file to avoid mixing formats;
+- Bumped Go to 1.26.
+
 ## v0.11.0
 
 - added watch config implemented by @mrchypark;

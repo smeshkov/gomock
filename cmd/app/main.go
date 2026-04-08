@@ -23,10 +23,9 @@ var (
 )
 
 func main() {
-	configFile := flag.String("config", "_resources/config.yml", "Configuration file")
 	mockFile := flag.String("mock", "mock.json", "Mock configuration file")
 	verbose := flag.Bool("verbose", false, "Verbose")
-	ver := flag.Bool("version", false, "prints version of Tagify")
+	ver := flag.Bool("version", false, "prints version of gomock")
 	watch := flag.Bool("watch", false, "Watch config file changes and reload automatically")
 
 	flag.Parse()
@@ -45,11 +44,14 @@ func main() {
 
 	// Server execution loop
 	for {
-		// Load initial configuration
-		cfg, err := config.NewConfig(*configFile)
+		var mck config.Mock
+		var mockPath string
+		mck, mockPath, err := config.NewMock(*mockFile)
 		if err != nil {
-			zap.L().Warn(fmt.Sprintf("failed to load configuration %s: %v", *configFile, err))
+			zap.L().Warn(fmt.Sprintf("failed to load mock configuration %s: %v", *mockFile, err))
 		}
+
+		cfg := mck.ToConfig()
 
 		logLevel := cfg.Logger.Level
 		if *verbose {
@@ -57,13 +59,6 @@ func main() {
 		}
 
 		config.SetupLog(logLevel)
-
-		var mck config.Mock
-		var mockPath string
-		mck, mockPath, err = config.NewMock(*mockFile)
-		if err != nil {
-			zap.L().Warn(fmt.Sprintf("failed to load API configuration %s: %v", *mockFile, err))
-		}
 
 		// Start and monitor server
 		serverCtx, cancelServer := context.WithCancel(context.Background())
@@ -77,7 +72,7 @@ func main() {
 
 		// Enable configuration file monitoring
 		if *watch {
-			go watchConfigFiles(*configFile, *mockFile, cancelServer)
+			go watchConfigFiles(*mockFile, cancelServer)
 		}
 
 		select {
@@ -128,20 +123,16 @@ func runServer(ctx context.Context, cfg *config.Config, mck *config.Mock, versio
 }
 
 // Monitor configuration file changes and restart server
-func watchConfigFiles(configPath, mockPath string, cancelServer context.CancelFunc) {
+func watchConfigFiles(mockPath string, cancelServer context.CancelFunc) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		zap.L().Fatal(fmt.Sprintf("failed to create watcher: %v", err))
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
-	// Add files to monitor
-	files := []string{configPath, mockPath}
-	for _, file := range files {
-		err = watcher.Add(file)
-		if err != nil {
-			zap.L().Fatal(fmt.Sprintf("failed to watch file %s: %v", file, err))
-		}
+	err = watcher.Add(mockPath)
+	if err != nil {
+		zap.L().Fatal(fmt.Sprintf("failed to watch file %s: %v", mockPath, err))
 	}
 
 	for {

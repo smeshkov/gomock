@@ -21,7 +21,7 @@ import (
 
 // GET /healthcheck
 func healthcheckHandler(w http.ResponseWriter, r *http.Request) *appError {
-	return writeResponse(w, map[string]interface{}{
+	return writeResponse(w, map[string]any{
 		"status": "OK",
 	})
 }
@@ -29,7 +29,7 @@ func healthcheckHandler(w http.ResponseWriter, r *http.Request) *appError {
 // GET /version
 func versionHandler(version string) func(rw http.ResponseWriter, req *http.Request) *appError {
 	return func(w http.ResponseWriter, r *http.Request) *appError {
-		return writeResponse(w, map[string]interface{}{
+		return writeResponse(w, map[string]any{
 			"version": version,
 		})
 	}
@@ -92,7 +92,7 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
 		// Dynamic read/write operation
 		if endpoint.Dynamic != nil {
 			if endpoint.Dynamic.Write != nil {
-				input := map[string]interface{}{}
+				input := map[string]any{}
 				appErr := readRequestJSON(r.Context(), r, &input)
 				if appErr != nil {
 					return appErr
@@ -117,7 +117,7 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
 				db.Write(endpoint.Dynamic.Write.JSON.Name, key, value)
 			} else if endpoint.Dynamic.Read != nil {
 				var key string
-				var value interface{}
+				var value any
 				var ok bool
 				if endpoint.Dynamic.Read.JSON.KeyParam == "" {
 					value, ok = db.ReadAll(endpoint.Dynamic.Read.JSON.Name)
@@ -246,21 +246,22 @@ func readJSON(mockPath, jsonPath string) ([]byte, error) {
 	return os.ReadFile(p)
 }
 
-func findKeyInJSON(path string, obj map[string]interface{}) (string, error) {
+func findKeyInJSON(path string, obj map[string]any) (string, error) {
 	parts := strings.Split(path, "/")
-	v := obj
+	var current any = obj
 	for i, p := range parts {
-		v, ok := v[p]
+		m, ok := current.(map[string]any)
+		if !ok {
+			return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the key [%s]", p, path)
+		}
+		val, ok := m[p]
 		if !ok {
 			return "", fmt.Errorf("error in traversing request JSON, attribute [%s] not found for the key [%s]", p, path)
 		}
 		if i < len(parts)-1 {
-			v, ok = v.(map[string]interface{})
-			if !ok {
-				return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the key [%s]", p, path)
-			}
+			current = val
 		} else {
-			s, ok := v.(string)
+			s, ok := val.(string)
 			if !ok {
 				return "", fmt.Errorf("error in traversing request JSON, value of key [%s] is not a string for the key [%s]", p, path)
 			}
@@ -270,25 +271,26 @@ func findKeyInJSON(path string, obj map[string]interface{}) (string, error) {
 	return "", fmt.Errorf("error in traversing request JSON, no parts for the key [%s]", path)
 }
 
-func findValueInJSON(path string, obj map[string]interface{}) (interface{}, error) {
+func findValueInJSON(path string, obj map[string]any) (any, error) {
 	parts := strings.Split(path, "/")
-	v := obj
+	var current any = obj
 	for i, p := range parts {
 		if p == "" || p == "." {
 			continue
 		}
-		v, ok := v[p]
+		m, ok := current.(map[string]any)
+		if !ok {
+			return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the value [%s]", p, path)
+		}
+		val, ok := m[p]
 		if !ok {
 			return "", fmt.Errorf("error in traversing request JSON, attribute [%s] not found for the value [%s]", p, path)
 		}
 		if i < len(parts)-1 {
-			v, ok = v.(map[string]interface{})
-			if !ok {
-				return "", fmt.Errorf("error in traversing request JSON, value of [%s] is not an object for the value [%s]", p, path)
-			}
+			current = val
 		} else {
-			return v, nil
+			return val, nil
 		}
 	}
-	return v, nil
+	return current, nil
 }

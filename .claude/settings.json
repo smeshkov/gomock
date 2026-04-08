@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)",
+      "Edit(.github/**)",
+      "Edit(cmd/**)",
+      "Edit(app/**)",
+      "Edit(config/**)",
+      "Edit(Makefile)",
+      "Edit(CLAUDE.md)",
+      "Edit(CHANGELOG.md)",
+      "Bash(go:*)",
+      "Bash(go run *)",
+      "Bash(go build *)",
+      "Bash(go test *)",
+      "Bash(go mod *)",
+      "Bash(make test)",
+      "Bash(make lint)",
+      "Bash(make fmt)",
+      "Bash(make checkfmt)",
+      "Bash(make vet)"
+    ],
+    "deny": [
+      "Edit(.claude/**)",
+      "Bash(rm -rf *)"
+    ]
+  }
+}

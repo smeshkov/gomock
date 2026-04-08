@@ -1,0 +1,15 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - modernfor
+    - useany
+  settings:
+    custom:
+      modernfor:
+        type: module
+        description: Enforces Go 1.22 range over int
+      useany:
+        type: module
+        description: Enforces using 'any' instead of 'interface{}'

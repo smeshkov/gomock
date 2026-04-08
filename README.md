@@ -42,6 +42,9 @@ Use `gomock --help` for more information.
 ```json
 {
   "port": 8080,
+  "readTimeout": "300s",
+  "writeTimeout": "300s",
+  "logLevel": "info",
   "endpoints": [
     {
       "methods": ["GET"],
@@ -71,7 +74,7 @@ Use `gomock --help` for more information.
       "methods": ["POST"],
       "path": "/api/*",
       "delay": 200,
-      "url": "http://localhost:8090"
+      "proxy": "http://localhost:8090"
     }
   ]
 }
@@ -80,6 +83,11 @@ Use `gomock --help` for more information.
 Mock JSON configuration properties:
 
 - `port` - optional (defaults to 8080);
+- `addr` - optional server address (e.g. `:3000`), overrides `port` if both set;
+- `readTimeout` - optional read timeout as a Go duration string (e.g. `"300s"`), defaults to `"5s"`;
+- `writeTimeout` - optional write timeout as a Go duration string, defaults to `"5s"`;
+- `idleTimeout` - optional idle timeout as a Go duration string, defaults to `"5s"`;
+- `logLevel` - optional log level (`"info"` or `"debug"`), defaults to `"info"`;
 - `endpoints` - an array of endpoints to configure;
 
 Endpoint object in `endpoints` list:
@@ -94,8 +102,7 @@ Endpoint object in `endpoints` list:
 - `static` - serves static files;
 - `errors` - helps to setup sampled errors, with the randomised error codes;
 - `allowCors` - list of allowed domains for CORS;
-- `dynamic` - allows to configure dynamic read/write behaviour, i.e. values can be stored and retrieved from the inetrnal store.
-- `watch` - allows to watch over the config files changes and reload automatically.
+- `dynamic` - allows to configure dynamic read/write behaviour, i.e. values can be stored and retrieved from the internal store.
 
 `mock.json` is the default name for a mock configuration file, it can be renamed and set via `-mock` option, e.g. `./gomock -mock api.json`
 
@@ -134,7 +141,7 @@ For reads use `dynamic.read.json`:
   "endpoints": [
     {
       "methods": ["GET"],
-      "path": "/note/{noteID:[a-zA-Z0-9-]+}", // uses Gorilla Mux paths
+      "path": "/note/{noteID:[a-zA-Z0-9-]+}", // uses chi paths
       "dynamic": {
         "read": {
           "json": {

@@ -59,7 +59,7 @@ func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // }
 
 // writeResponse writes response to provided ResponseWriter in JSON format.
-func writeResponse(rw http.ResponseWriter, response interface{}) *appError {
+func writeResponse(rw http.ResponseWriter, response any) *appError {
 	rw.Header().Set("Content-Type", "application/json")
 	err := json.NewEncoder(rw).Encode(response)
 	if err != nil {

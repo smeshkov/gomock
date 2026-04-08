@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"os"
@@ -14,7 +15,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 
 	"github.com/smeshkov/gomock/config"
 )
@@ -42,14 +42,14 @@ func versionHandler(version string) func(http.ResponseWriter, *http.Request) *ap
 	}
 }
 
-func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
+func apiHandler(log *slog.Logger, endpoint *config.Endpoint, status int,
 	jsonData []byte, proxy *Proxy, database *store) func(http.ResponseWriter, *http.Request) *appError {
 	errCnt, errCodes := setupFails(endpoint)
 
 	var ops uint64
 
 	return func(writer http.ResponseWriter, req *http.Request) *appError {
-		log.Sugar().Debugf("handling [%s]", req.RequestURI)
+		log.Debug("handling request", "uri", req.RequestURI)
 
 		if endpoint.Delay > 0 {
 			time.Sleep(time.Duration(endpoint.Delay) * time.Millisecond)
@@ -73,7 +73,7 @@ func apiHandler(log *zap.Logger, endpoint *config.Endpoint, status int,
 }
 
 func handleErrorSimulation(endpoint *config.Endpoint, ops *uint64,
-	errCnt uint64, errCodes []int, log *zap.Logger) *appError {
+	errCnt uint64, errCodes []int, log *slog.Logger) *appError {
 	if endpoint.Errors == nil {
 		return nil
 	}
@@ -95,7 +95,7 @@ func handleErrorSimulation(endpoint *config.Endpoint, ops *uint64,
 	}
 }
 
-func handleResponse(log *zap.Logger, endpoint *config.Endpoint, jsonData []byte,
+func handleResponse(log *slog.Logger, endpoint *config.Endpoint, jsonData []byte,
 	database *store, writer http.ResponseWriter, req *http.Request) *appError {
 	// Serve static JSON file from JSONPath if set.
 	if endpoint.JSONPath != "" {
@@ -113,7 +113,7 @@ func handleResponse(log *zap.Logger, endpoint *config.Endpoint, jsonData []byte,
 
 	// Serve JSON from API configuration instead.
 	if endpoint.JSON != nil {
-		log.Debug("returning JSON object", zap.String("object", fmt.Sprintf("%#v", endpoint.JSON)))
+		log.Debug("returning JSON object", "object", fmt.Sprintf("%#v", endpoint.JSON))
 
 		return writeResponse(writer, endpoint.JSON)
 	}
@@ -126,7 +126,7 @@ func handleResponse(log *zap.Logger, endpoint *config.Endpoint, jsonData []byte,
 	return nil
 }
 
-func handleDynamic(log *zap.Logger, endpoint *config.Endpoint,
+func handleDynamic(log *slog.Logger, endpoint *config.Endpoint,
 	database *store, writer http.ResponseWriter, req *http.Request) *appError {
 	if endpoint.Dynamic.Write != nil {
 		return handleDynamicWrite(log, endpoint, database, req)
@@ -139,7 +139,7 @@ func handleDynamic(log *zap.Logger, endpoint *config.Endpoint,
 	return nil
 }
 
-func handleDynamicWrite(log *zap.Logger, endpoint *config.Endpoint,
+func handleDynamicWrite(log *slog.Logger, endpoint *config.Endpoint,
 	database *store, req *http.Request) *appError {
 	input := map[string]any{}
 
@@ -166,13 +166,13 @@ func handleDynamicWrite(log *zap.Logger, endpoint *config.Endpoint,
 		}
 	}
 
-	log.Sugar().Debugf("writing [%s] under the key [%s]", endpoint.Dynamic.Write.JSON.Name, key)
+	log.Debug("writing dynamic entry", "name", endpoint.Dynamic.Write.JSON.Name, "key", key)
 	database.Write(endpoint.Dynamic.Write.JSON.Name, key, value)
 
 	return nil
 }
 
-func handleDynamicRead(log *zap.Logger, endpoint *config.Endpoint,
+func handleDynamicRead(log *slog.Logger, endpoint *config.Endpoint,
 	database *store, writer http.ResponseWriter, req *http.Request) *appError {
 	var (
 		key   string
@@ -194,7 +194,7 @@ func handleDynamicRead(log *zap.Logger, endpoint *config.Endpoint,
 		}
 	}
 
-	log.Sugar().Debugf("reading [%s] under the key [%s]", endpoint.Dynamic.Read.JSON.Name, key)
+	log.Debug("reading dynamic entry", "name", endpoint.Dynamic.Read.JSON.Name, "key", key)
 
 	return writeResponse(writer, value)
 }
@@ -214,10 +214,10 @@ func setupFails(endpoint *config.Endpoint) (uint64, []int) {
 
 	errCnt := uint64(1.0 / endpoint.Errors.Sample)
 
-	zap.L().Debug("every Nth request will fail",
-		zap.String("endpoint", endpoint.Path),
-		zap.Uint64("every_nth_err", errCnt),
-		zap.String("errCodes", fmt.Sprintf("%v", errCodes)))
+	slog.Debug("every Nth request will fail",
+		"endpoint", endpoint.Path,
+		"every_nth_err", errCnt,
+		"errCodes", fmt.Sprintf("%v", errCodes))
 
 	return errCnt, errCodes
 }
@@ -231,25 +231,14 @@ func setupAPI(cfg *config.Config, mockPath string, mck *config.Mock, router *chi
 			status = http.StatusOK
 		}
 
-		logger := zap.L().With(
-			zap.String("endpoint", endpoint.Path),
-			zap.String("methods", fmt.Sprintf("%v", endpoint.Methods)),
+		logger := slog.Default().With(
+			"endpoint", endpoint.Path,
+			"methods", fmt.Sprintf("%v", endpoint.Methods),
 		)
-
-		if logger.Core().Enabled(zap.DebugLevel) {
-			logger = logger.With(
-				zap.Int("status", status),
-				zap.Bool("json", endpoint.JSON != nil),
-				zap.Bool("dynamic", endpoint.Dynamic != nil),
-				zap.String("jsonPath", endpoint.JSONPath),
-				zap.String("proxy", endpoint.Proxy),
-				zap.String("static", endpoint.Static),
-			)
-		}
 
 		route := resolveRoute(endpoint.Path)
 
-		logger = logger.With(zap.String("route", route))
+		logger = logger.With("route", route)
 		logger.Info("setting up endpoint")
 
 		configureRoute(router, route, cfg, mockPath, endpoint, logger, status, database)
@@ -278,7 +267,7 @@ func resolveRoute(endpointPath string) string {
 }
 
 func configureRoute(router *chi.Mux, route string, cfg *config.Config, mockPath string,
-	endpoint *config.Endpoint, logger *zap.Logger, status int, database *store) {
+	endpoint *config.Endpoint, logger *slog.Logger, status int, database *store) {
 	router.Route(route, func(subrouter chi.Router) {
 		if len(endpoint.AllowCors) > 0 {
 			subrouter.Use(NewCORS(endpoint.AllowCors...).Middleware)
@@ -291,8 +280,8 @@ func configureRoute(router *chi.Mux, route string, cfg *config.Config, mockPath 
 		if endpoint.JSONPath != "" {
 			jsonData, err = readJSON(mockPath, endpoint.JSONPath)
 			if err != nil {
-				logger.Sugar().
-					Errorf("error in reading JSON from the path [%s] for path [%s]", endpoint.JSONPath, endpoint.Path)
+				logger.Error(fmt.Sprintf("error in reading JSON from the path [%s] for path [%s]",
+					endpoint.JSONPath, endpoint.Path))
 
 				return
 			}
@@ -303,8 +292,8 @@ func configureRoute(router *chi.Mux, route string, cfg *config.Config, mockPath 
 		if endpoint.Proxy != "" {
 			proxy, err = newProxy(cfg.Server.Addr, endpoint.Proxy, logger)
 			if err != nil {
-				logger.Sugar().
-					Errorf("error in creating a proxy for path [%s]: %v", endpoint.Path, err)
+				logger.Error(fmt.Sprintf("error in creating a proxy for path [%s]: %v",
+					endpoint.Path, err))
 
 				return
 			}

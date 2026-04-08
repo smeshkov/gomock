@@ -3,12 +3,11 @@ package app
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
-
-	"go.uber.org/zap"
 )
 
 // Proxy wraps a reverse proxy with URL rewriting.
@@ -16,7 +15,7 @@ type Proxy struct {
 	host   *url.URL
 	target *url.URL
 	proxy  *httputil.ReverseProxy
-	log    *zap.Logger
+	log    *slog.Logger
 }
 
 var (
@@ -29,7 +28,7 @@ const (
 	redirectMaxCode = 400
 )
 
-func newProxy(serverAddr, target string, log *zap.Logger) (*Proxy, error) {
+func newProxy(serverAddr, target string, log *slog.Logger) (*Proxy, error) {
 	hostURL, err := url.Parse("http://localhost" + serverAddr)
 	if err != nil {
 		return nil, fmt.Errorf("%w [%s]", errParseHostURL, serverAddr)
@@ -57,14 +56,14 @@ func (p *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 	// ---> request handling
 	newReqQuery, err := p.adjustRedirectQuery(req.URL)
 	if err != nil {
-		p.log.Sugar().Errorf("error in adjusting request URI redirect location: %v", err)
+		p.log.Error("error in adjusting request URI redirect location", "error", err)
 
 		return
 	}
 
 	req.URL.RawQuery = newReqQuery
 
-	p.log.Sugar().Debugf("proxying call to [%s]", req.RequestURI)
+	p.log.Debug("proxying call", "target", req.RequestURI)
 	p.proxy.ServeHTTP(wrapper, req)
 
 	// ---> response handling
@@ -76,7 +75,7 @@ func (p *Proxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 	location := writer.Header().Get("Location")
 	if location != "" {
 		redirect := p.adjustRedirectURL(location)
-		p.log.Sugar().Debugf("redirect location [%s]", redirect)
+		p.log.Debug("redirect location", "url", redirect)
 		http.Redirect(writer, req, redirect, wrapper.statusCode)
 	}
 }

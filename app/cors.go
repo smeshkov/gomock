@@ -1,11 +1,11 @@
 package app
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/handlers"
-	"go.uber.org/zap"
 )
 
 // CORS provides cross-origin resource sharing middleware.
@@ -24,7 +24,7 @@ func NewCORS(allowedOrigins ...string) *CORS {
 			}
 		}
 
-		zap.L().Debug("CORS - not allowed origin: " + origin)
+		slog.Debug("CORS - not allowed origin: " + origin)
 
 		return false
 	}

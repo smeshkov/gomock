@@ -4,10 +4,10 @@ package app
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"go.uber.org/zap"
 
 	"github.com/smeshkov/gomock/config"
 )
@@ -34,7 +34,7 @@ type appError struct {
 	Error   error
 	Message string
 	Code    int
-	Log     *zap.Logger
+	Log     *slog.Logger
 }
 
 func (fn appHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
@@ -42,7 +42,7 @@ func (fn appHandler) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
 	if appErr != nil {
 		logger := appErr.Log
 		if logger == nil {
-			logger = zap.L()
+			logger = slog.Default()
 		}
 
 		logger.Error(fmt.Sprintf("handler error: status code: %d, message: %s, underlying err: %#v",

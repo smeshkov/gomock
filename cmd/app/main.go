@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"go.uber.org/zap"
 	"gopkg.in/fsnotify.v1"
 
 	"github.com/smeshkov/gomock/app"
@@ -67,7 +67,7 @@ func serverLoop(mockFile string, watch bool, overrides config.CLIOverrides) {
 	for {
 		mck, mockPath, err := config.NewMock(mockFile)
 		if err != nil {
-			zap.L().Warn(fmt.Sprintf("failed to load mock configuration %s: %v", mockFile, err))
+			slog.Warn(fmt.Sprintf("failed to load mock configuration %s: %v", mockFile, err))
 		}
 
 		cfg := mck.ToConfig()
@@ -89,13 +89,13 @@ func serverLoop(mockFile string, watch bool, overrides config.CLIOverrides) {
 
 		select {
 		case <-sigChan:
-			zap.L().Info("received termination signal, shutting down...")
+			slog.Info("received termination signal, shutting down...")
 			cancelServer()
 			waitGroup.Wait()
 
 			return
 		case <-serverCtx.Done():
-			zap.L().Info("restarting server due to configuration change...")
+			slog.Info("restarting server due to configuration change...")
 			waitGroup.Wait()
 		}
 	}
@@ -113,60 +113,72 @@ func runServer(ctx context.Context, cfg *config.Config, mck *config.Mock, ver, m
 	}
 
 	go func() {
-		zap.L().Info(fmt.Sprintf("starting proxy app on %s (read timeout %s, write timeout %s)",
+		slog.Info(fmt.Sprintf("starting Gomock server at %s (read timeout %s, write timeout %s)",
 			cfg.Server.Addr, cfg.Server.ReadTimeout.String(), cfg.Server.WriteTimeout.String()))
 
 		err := srv.ListenAndServe()
 		if !errors.Is(err, http.ErrServerClosed) {
-			zap.L().Fatal(fmt.Sprintf("failed to start server: %v", err))
+			slog.Error(fmt.Sprintf("failed to start server: %v", err))
+			os.Exit(1)
 		}
 	}()
 
 	<-ctx.Done()
-	zap.L().Info("shutting down server...")
+	slog.Info("shutting down server...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
-	defer cancel()
 
 	err := srv.Shutdown(shutdownCtx)
+
+	cancel()
+
 	if err != nil {
-		zap.L().Fatal(fmt.Sprintf("server shutdown failed: %v", err))
+		slog.Error(fmt.Sprintf("server shutdown failed: %v", err))
+		os.Exit(1)
 	}
 }
 
 // watchConfigFiles monitors configuration file changes and restarts server.
 func watchConfigFiles(mockPath string, cancelServer context.CancelFunc) {
+	err := watchLoop(mockPath, cancelServer)
+	if err != nil {
+		slog.Error(fmt.Sprintf("watcher failed: %v", err))
+		os.Exit(1)
+	}
+}
+
+func watchLoop(mockPath string, cancelServer context.CancelFunc) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		zap.L().Fatal(fmt.Sprintf("failed to create watcher: %v", err))
+		return fmt.Errorf("creating watcher: %w", err)
 	}
 
 	defer func() { _ = watcher.Close() }()
 
 	err = watcher.Add(mockPath)
 	if err != nil {
-		zap.L().Fatal(fmt.Sprintf("failed to watch file %s: %v", mockPath, err))
+		return fmt.Errorf("watching file %s: %w", mockPath, err)
 	}
 
 	for {
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
-				return
+				return nil
 			}
 
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				zap.L().Info(fmt.Sprintf("file %s changed, restarting server...", event.Name))
+				slog.Info(fmt.Sprintf("file %s changed, restarting server...", event.Name))
 				cancelServer() // Trigger server shutdown
 
-				return // Exit monitoring loop, server will restart in main loop
+				return nil // Exit monitoring loop, server will restart in main loop
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {
-				return
+				return nil
 			}
 
-			zap.L().Error(fmt.Sprintf("watcher error: %v", err))
+			slog.Error(fmt.Sprintf("watcher error: %v", err))
 		}
 	}
 }

@@ -1,4 +1,4 @@
-package app
+package app //nolint:testpackage // testing unexported store internals
 
 import (
 	"testing"
@@ -7,19 +7,25 @@ import (
 )
 
 func Test_WriteRead(t *testing.T) {
-	st := newStore()
-	st.Write("foo", "bar", "bee")
-	v, ok := st.Read("foo", "bar")
+	t.Parallel()
+
+	store := newStore()
+	store.Write("foo", "bar", "bee")
+
+	val, ok := store.Read("foo", "bar")
 	assert.True(t, ok)
-	assert.Equal(t, "bee", v)
+	assert.Equal(t, "bee", val)
 }
 
 func Test_ReadAll(t *testing.T) {
-	st := newStore()
-	st.Write("foo", "bar", "bee")
-	st.Write("foo", "bar2", "bee2")
-	st.Write("foo", "bar3", "bee3")
-	table, ok := st.ReadAll("foo")
+	t.Parallel()
+
+	store := newStore()
+	store.Write("foo", "bar", "bee")
+	store.Write("foo", "bar2", "bee2")
+	store.Write("foo", "bar3", "bee3")
+
+	table, ok := store.ReadAll("foo")
 	assert.True(t, ok)
 	assert.Len(t, table, 3)
 	assert.Contains(t, table, "bar")

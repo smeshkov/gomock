@@ -18,13 +18,19 @@ func newStore() *store {
 func (s *store) Write(entity, key string, value any) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
 	var table map[string]any
-	v, ok := s.table[entity]
-	if !ok {
+
+	val, exists := s.table[entity]
+	if !exists {
 		table = map[string]any{}
 	} else {
-		table = v.(map[string]any)
+		table, exists = val.(map[string]any)
+		if !exists {
+			table = map[string]any{}
+		}
 	}
+
 	table[key] = value
 	s.table[entity] = table
 }
@@ -32,22 +38,32 @@ func (s *store) Write(entity, key string, value any) {
 func (s *store) Read(entity, key string) (any, bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	v, ok := s.table[entity]
-	if !ok {
+
+	val, exists := s.table[entity]
+	if !exists {
 		return nil, false
 	}
-	table := v.(map[string]any)
-	obj, ok := table[key]
-	return obj, ok
+
+	table, isMap := val.(map[string]any)
+	if !isMap {
+		return nil, false
+	}
+
+	obj, found := table[key]
+
+	return obj, found
 }
 
 func (s *store) ReadAll(entity string) (map[string]any, bool) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
-	v, ok := s.table[entity]
-	if !ok {
+
+	val, exists := s.table[entity]
+	if !exists {
 		return nil, false
 	}
-	table, ok := v.(map[string]any)
-	return table, ok
+
+	table, isMap := val.(map[string]any)
+
+	return table, isMap
 }

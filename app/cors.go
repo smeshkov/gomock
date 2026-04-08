@@ -1,15 +1,14 @@
 package app
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/handlers"
-	"go.uber.org/zap"
 )
 
-// CORS ...
+// CORS provides cross-origin resource sharing middleware.
 type CORS struct {
 	allowedOrigins []string
 	handler        func(http.Handler) http.Handler
@@ -24,9 +23,12 @@ func NewCORS(allowedOrigins ...string) *CORS {
 				return true
 			}
 		}
-		zap.L().Debug(fmt.Sprintf("CORS - not allowed origin: %s", origin))
+
+		slog.Debug("CORS - not allowed origin: " + origin)
+
 		return false
 	}
+
 	return &CORS{
 		allowedOrigins: allowedOrigins,
 		handler: handlers.CORS(
@@ -53,7 +55,7 @@ func NewCORS(allowedOrigins ...string) *CORS {
 	}
 }
 
-// Middleware ...
+// Middleware returns the CORS middleware handler.
 func (c *CORS) Middleware(next http.Handler) http.Handler {
 	return c.handler(next)
 }

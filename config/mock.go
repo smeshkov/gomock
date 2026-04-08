@@ -2,11 +2,14 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 )
+
+const defaultTimeout = 5 * time.Second
 
 // Mock represents configuration of API.
 type Mock struct {
@@ -19,33 +22,63 @@ type Mock struct {
 	Endpoints    []*Endpoint `json:"endpoints"`
 }
 
+// NewMock loads API configuration from file.
+func NewMock(file string) (Mock, string, error) {
+	absPath, err := filepath.Abs(file)
+	if err != nil {
+		return Mock{}, "", fmt.Errorf("resolving absolute path: %w", err)
+	}
+
+	dir := filepath.Dir(absPath)
+
+	data, err := os.ReadFile(filepath.Clean(file))
+	if err != nil {
+		return Mock{}, "", fmt.Errorf("reading mock file: %w", err)
+	}
+
+	var mock Mock
+
+	err = json.Unmarshal(data, &mock)
+	if err != nil {
+		return Mock{}, "", fmt.Errorf("unmarshalling mock JSON: %w", err)
+	}
+
+	return mock, dir, nil
+}
+
 // ToConfig converts Mock server settings into a Config with sensible defaults.
 func (m *Mock) ToConfig() Config {
 	var cfg Config
 
 	// Defaults
 	cfg.Server.Addr = ":8080"
-	cfg.Server.ReadTimeout = 5 * time.Second
-	cfg.Server.WriteTimeout = 5 * time.Second
-	cfg.Server.IdleTimeout = 5 * time.Second
+	cfg.Server.ReadTimeout = defaultTimeout
+	cfg.Server.WriteTimeout = defaultTimeout
+	cfg.Server.IdleTimeout = defaultTimeout
 	cfg.Logger.Level = "info"
 
 	// Apply port (addr takes precedence if both set)
 	if m.Port > 0 {
 		cfg.Server.Addr = ":" + strconv.Itoa(m.Port)
 	}
+
 	if m.Addr != "" {
 		cfg.Server.Addr = m.Addr
 	}
 
-	if d, err := time.ParseDuration(m.ReadTimeout); err == nil {
-		cfg.Server.ReadTimeout = d
+	readTimeout, err := time.ParseDuration(m.ReadTimeout)
+	if err == nil {
+		cfg.Server.ReadTimeout = readTimeout
 	}
-	if d, err := time.ParseDuration(m.WriteTimeout); err == nil {
-		cfg.Server.WriteTimeout = d
+
+	writeTimeout, err := time.ParseDuration(m.WriteTimeout)
+	if err == nil {
+		cfg.Server.WriteTimeout = writeTimeout
 	}
-	if d, err := time.ParseDuration(m.IdleTimeout); err == nil {
-		cfg.Server.IdleTimeout = d
+
+	idleTimeout, err := time.ParseDuration(m.IdleTimeout)
+	if err == nil {
+		cfg.Server.IdleTimeout = idleTimeout
 	}
 
 	if m.LogLevel != "" {
@@ -84,27 +117,8 @@ type Endpoint struct {
 	} `json:"dynamic,omitempty"`
 }
 
-// Errors ...
+// Errors represents error simulation configuration.
 type Errors struct {
 	Sample   float32 `json:"sample,omitempty"`
 	Statuses []int   `json:"statuses,omitempty"`
-}
-
-// NewMock loads API configuration from file.
-func NewMock(file string) (mock Mock, path string, err error) {
-	path, err = filepath.Abs(file)
-	if err != nil {
-		return
-	}
-	path = filepath.Dir(path)
-	data, err := os.ReadFile(file)
-	if err != nil {
-		return
-	}
-	err = json.Unmarshal(data, &mock)
-	if err != nil {
-		return
-	}
-
-	return
 }

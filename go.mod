@@ -3,7 +3,7 @@ module github.com/smeshkov/gomock
 go 1.26
 
 require (
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/gorilla/handlers v1.5.1
 	github.com/stretchr/testify v1.4.0
 	gopkg.in/fsnotify.v1 v1.4.7
